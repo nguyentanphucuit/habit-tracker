@@ -6,32 +6,26 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       userId,
-      // Basic metrics
+      date = new Date().toISOString(),
       weight,
       height,
       bmi,
-      // Apple Health specific metrics
       steps,
       distance,
       caloriesBurned,
       activeEnergy,
       restingEnergy,
-      // Vital signs
       bloodPressure,
       heartRate,
       bloodOxygen,
       bodyTemperature,
-      // Sleep data
       sleepHours,
       sleepQuality,
-      // Activity data
       exerciseMinutes,
       standHours,
-      // Other metrics
       waterIntake,
       notes,
-      date,
-      source = "apple_health", // Track data source
+      source = "apple_health",
     } = body;
 
     // Validate required fields
@@ -42,46 +36,80 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create health record with Apple Health data
-    const healthRecord = await prisma.health.create({
-      data: {
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Parse the date
+    const parsedDate = new Date(date);
+
+    // Create or update health data for the given date
+    const healthData = await prisma.health.upsert({
+      where: {
+        userId_date: {
+          userId,
+          date: parsedDate,
+        },
+      },
+      update: {
+        weight,
+        height,
+        bmi,
+        steps,
+        distance,
+        caloriesBurned,
+        activeEnergy,
+        restingEnergy,
+        bloodPressure,
+        heartRate,
+        bloodOxygen,
+        bodyTemperature,
+        sleepHours,
+        sleepQuality,
+        exerciseMinutes,
+        standHours,
+        waterIntake,
+        notes,
+        source,
+        updatedAt: new Date(),
+      },
+      create: {
         userId,
-        // Basic metrics
-        weight: weight || null,
-        height: height || null,
-        bmi: bmi || null,
-        // Apple Health metrics
-        steps: steps || null,
-        distance: distance || null,
-        caloriesBurned: caloriesBurned || null,
-        activeEnergy: activeEnergy || null,
-        restingEnergy: restingEnergy || null,
-        // Vital signs
-        bloodPressure: bloodPressure || null,
-        heartRate: heartRate || null,
-        bloodOxygen: bloodOxygen || null,
-        bodyTemperature: bodyTemperature || null,
-        // Sleep data
-        sleepHours: sleepHours || null,
-        sleepQuality: sleepQuality || null,
-        // Activity data
-        exerciseMinutes: exerciseMinutes || null,
-        standHours: standHours || null,
-        // Other metrics
-        waterIntake: waterIntake || null,
-        notes: notes || null,
-        source: source,
-        date: date ? new Date(date) : new Date(),
+        date: parsedDate,
+        weight,
+        height,
+        bmi,
+        steps,
+        distance,
+        caloriesBurned,
+        activeEnergy,
+        restingEnergy,
+        bloodPressure,
+        heartRate,
+        bloodOxygen,
+        bodyTemperature,
+        sleepHours,
+        sleepQuality,
+        exerciseMinutes,
+        standHours,
+        waterIntake,
+        notes,
+        source,
       },
     });
 
     return NextResponse.json({
       success: true,
       message: "Health data from Apple Health saved successfully",
-      data: healthRecord,
+      data: healthData,
     });
   } catch (error) {
-    console.error("Error saving Apple Health data:", error);
+    console.error("Error saving health data:", error);
     return NextResponse.json(
       { error: "Failed to save health data" },
       { status: 500 }
@@ -97,6 +125,7 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get("endDate");
     const source = searchParams.get("source");
 
+    // Validate required fields
     if (!userId) {
       return NextResponse.json(
         { error: "userId is required" },
@@ -104,34 +133,46 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const where: {
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Build where clause
+    const whereClause: {
       userId: string;
-      date?: { gte: Date; lte: Date };
+      date?: { gte?: Date; lte?: Date };
       source?: string;
     } = { userId };
 
-    if (startDate && endDate) {
-      where.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      };
+    if (startDate || endDate) {
+      whereClause.date = {};
+      if (startDate) {
+        whereClause.date.gte = new Date(startDate);
+      }
+      if (endDate) {
+        whereClause.date.lte = new Date(endDate);
+      }
     }
 
     if (source) {
-      where.source = source;
+      whereClause.source = source;
     }
 
-    const healthRecords = await prisma.health.findMany({
-      where,
-      orderBy: {
-        date: "desc",
-      },
+    // Fetch health data
+    const healthData = await prisma.health.findMany({
+      where: whereClause,
+      orderBy: { date: "desc" },
     });
 
     return NextResponse.json({
       success: true,
-      data: healthRecords,
-      count: healthRecords.length,
+      data: healthData,
+      count: healthData.length,
     });
   } catch (error) {
     console.error("Error fetching health data:", error);

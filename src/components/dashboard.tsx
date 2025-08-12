@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { HabitList } from "@/components/habit-list";
 import { AddHabitDialog } from "@/components/add-habit-dialog";
+import { FakeDataButton } from "@/components/fake-data-button";
 import { useHabits } from "@/contexts/habit-context";
 import { getToday } from "@/lib/habit-utils";
 
@@ -95,6 +96,9 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Fake Data Generator */}
+      <FakeDataButton />
 
       {/* Today's Habits */}
       <Card>

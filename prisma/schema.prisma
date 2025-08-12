@@ -3,7 +3,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -28,6 +27,7 @@ model User {
   displayName String?
   habits    Habit[]
   dailyProgress DailyProgress[]
+  habitChecks HabitCheck[]
   health    Health[]
   createdAt DateTime @default(now())
 }
@@ -48,6 +48,7 @@ model Habit {
   lastResetDate   DateTime       @default(now())
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+  habitChecks     HabitCheck[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -68,47 +69,64 @@ model DailyProgress {
   @@index([date])
 }
 
-model Health {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Basic metrics
-  weight         Float?   // in kg
-  height         Float?   // in cm
-  bmi            Float?
-  
-  // Apple Health specific metrics
-  steps          Int?     // daily step count
-  distance       Float?   // in meters
-  caloriesBurned Float?   // in kcal
-  activeEnergy   Float?   // in kcal
-  restingEnergy  Float?   // in kcal
-  
-  // Vital signs
-  bloodPressure  String?  // e.g., "120/80"
-  heartRate      Int?     // beats per minute
-  bloodOxygen    Float?   // percentage
-  bodyTemperature Float?  // in celsius
-  
-  // Sleep data
-  sleepHours     Float?   // in hours
-  sleepQuality   String?  // e.g., "good", "fair", "poor"
-  
-  // Activity data
-  exerciseMinutes Int?    // in minutes
-  standHours     Float?   // in hours
-  
-  // Other metrics
-  waterIntake    Float?   // in ml
-  
-  // Metadata
-  source         String   @default("apple_health") // data source
-  notes          String?
-  date           DateTime @default(now())
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+model HabitCheck {
+  id        String   @id @default(cuid())
+  habitId   String
+  habit     Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String  // ISO date string
+  completed Boolean
+  timestamp String  // ISO timestamp string
+  createdAt DateTime @default(now())
 
+  @@index([habitId])
+  @@index([userId])
+  @@index([date])
+  @@index([completed])
+}
+
+model Health {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            DateTime @db.Date
+  
+  // Basic Metrics
+  weight          Float?
+  height          Float?
+  bmi             Float?
+  
+  // Apple Health Specific Metrics
+  steps           Int?
+  distance        Int?
+  caloriesBurned  Int?
+  activeEnergy    Int?
+  restingEnergy   Int?
+  
+  // Vital Signs
+  bloodPressure   String?
+  heartRate       Int?
+  bloodOxygen     Float?
+  bodyTemperature Float?
+  
+  // Sleep Data
+  sleepHours      Float?
+  sleepQuality    String?
+  
+  // Activity Data
+  exerciseMinutes Int?
+  standHours      Int?
+  
+  // Other Metrics
+  waterIntake     Int?
+  notes           String?
+  source          String  @default("apple_health")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, date])
   @@index([userId])
   @@index([date])
   @@index([source])
