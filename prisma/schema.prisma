@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum HabitFrequency {
+  DAILY
+  WEEKLY
+}
+
+enum TargetType {
+  COUNT
+  MINUTES
+  BOOLEAN
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  displayName String?
+  habits    Habit[]
+  dailyProgress DailyProgress[]
+  createdAt DateTime @default(now())
+}
+
+model Habit {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  frequency       HabitFrequency
+  targetType      TargetType
+  targetValue     Int
+  active          Boolean        @default(true)
+  currentProgress Int            @default(0)
+  isCompleted     Boolean        @default(false)
+  lastUpdated     DateTime       @default(now())
+  totalProgress   Int            @default(0)
+  lastResetDate   DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@index([active])
+  @@index([lastResetDate])
+}
+
+model DailyProgress {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date       DateTime @db.Date
+  habitsData Json
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+}
