@@ -1,0 +1,33 @@
+# Prisma
+prisma/migrations/
+prisma/seed.ts
+
+# Development files
+*.log
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build artifacts
+.next/
+out/
+dist/
+
+# Dependencies
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test files
+test-*.js
+*.test.js
+*.spec.js
