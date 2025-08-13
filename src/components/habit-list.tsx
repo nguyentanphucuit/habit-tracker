@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X, MoreHorizontal, Edit, Trash2, Calendar } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { HabitWithChecks } from "@/types/habit";
 import { useHabits } from "@/contexts/habit-context";
-import { getToday, isDateEligible } from "@/lib/habit-utils";
 import { EditHabitDialog } from "./edit-habit-dialog";
 
 interface HabitListProps {
@@ -23,14 +22,7 @@ export function HabitList({ habits }: HabitListProps) {
   const [editingHabit, setEditingHabit] = useState<HabitWithChecks | null>(
     null
   );
-  const { toggleCheck, deleteHabit } = useHabits();
-  const today = getToday();
-
-  const handleToggle = (habit: HabitWithChecks) => {
-    if (isDateEligible(habit, today)) {
-      toggleCheck(habit.id, today);
-    }
-  };
+  const { deleteHabit } = useHabits();
 
   const handleDelete = (habit: HabitWithChecks) => {
     if (confirm(`Are you sure you want to delete "${habit.name}"?`)) {
@@ -41,10 +33,6 @@ export function HabitList({ habits }: HabitListProps) {
   return (
     <div className="space-y-3">
       {habits.map((habit) => {
-        const isEligibleToday = isDateEligible(habit, today);
-        const todayCheck = habit.checks.find((check) => check.date === today);
-        const isCompletedToday = todayCheck?.completed || false;
-
         return (
           <div
             key={habit.id}
@@ -69,31 +57,6 @@ export function HabitList({ habits }: HabitListProps) {
             </div>
 
             <div className="flex items-center space-x-2">
-              {isEligibleToday ? (
-                <Button
-                  variant={isCompletedToday ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleToggle(habit)}
-                  className={`w-10 h-10 p-0 ${
-                    isCompletedToday
-                      ? "bg-green-500 hover:bg-green-600"
-                      : "hover:bg-green-50 dark:hover:bg-green-950"
-                  }`}>
-                  {isCompletedToday ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <X className="h-4 w-4" />
-                  )}
-                </Button>
-              ) : (
-                <Badge
-                  variant="secondary"
-                  className="flex items-center space-x-1">
-                  <Calendar className="h-3 w-3" />
-                  <span>Not today</span>
-                </Badge>
-              )}
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0">

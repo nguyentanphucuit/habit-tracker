@@ -16,6 +16,39 @@ import {
   generateId,
   isDateEligible,
 } from "@/lib/habit-utils";
+import { DEFAULT_HABIT_STATS } from "@/lib/default-data";
+
+// API response types
+interface ApiHabit {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+  frequency: "daily" | "weekly" | "monthly";
+  customDays: number[];
+  startDate: string;
+  createdAt: string;
+  updatedAt: string;
+  targetValue: number;
+  targetType: string;
+  currentProgress: number;
+  checks: ApiHabitCheck[];
+  currentStreak: number;
+  bestStreak: number;
+  completionRate: number;
+}
+
+interface ApiHabitCheck {
+  habitId: string;
+  date: string;
+  completed: boolean;
+  timestamp: string;
+}
+
+interface ApiResponse {
+  success: boolean;
+  habits: ApiHabit[];
+}
 
 interface HabitContextType {
   habits: Habit[];
@@ -45,21 +78,57 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [checks, setChecks] = useState<HabitCheck[]>([]);
-  const [stats, setStats] = useState<HabitStats>({
-    totalHabits: 0,
-    completedToday: 0,
-    completionRate7Days: 0,
-    completionRate30Days: 0,
-    bestStreak: 0,
-  });
+  const [stats, setStats] = useState<HabitStats>(DEFAULT_HABIT_STATS);
 
-  // Load data from localStorage on mount
+  // Load data from API on mount
   useEffect(() => {
-    const savedHabits = storage.getHabits();
-    const savedChecks = storage.getChecks();
+    const fetchHabits = async () => {
+      try {
+        const response = await fetch("/api/habits");
+        if (response.ok) {
+          const data: ApiResponse = await response.json();
+          if (data.success) {
+            // Transform API habits to match our local format
+            const apiHabits = data.habits.map((habit: ApiHabit) => ({
+              id: habit.id,
+              name: habit.name,
+              emoji: habit.emoji,
+              color: habit.color,
+              frequency: habit.frequency,
+              customDays: habit.customDays,
+              startDate: habit.startDate,
+              createdAt: habit.createdAt,
+              updatedAt: habit.updatedAt,
+              targetValue: habit.targetValue,
+              targetType: habit.targetType,
+              currentProgress: habit.currentProgress,
+            }));
 
-    setHabits(savedHabits);
-    setChecks(savedChecks);
+            // Extract checks from habits
+            const allChecks = data.habits.flatMap((habit: ApiHabit) =>
+              habit.checks.map((check: ApiHabitCheck) => ({
+                habitId: check.habitId,
+                date: check.date,
+                completed: check.completed,
+                timestamp: check.timestamp,
+              }))
+            );
+
+            setHabits(apiHabits);
+            setChecks(allChecks);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch habits:", error);
+        // Fallback to localStorage if API fails
+        const savedHabits = storage.getHabits();
+        const savedChecks = storage.getChecks();
+        setHabits(savedHabits);
+        setChecks(savedChecks);
+      }
+    };
+
+    fetchHabits();
   }, []);
 
   // Calculate habits with checks and stats
@@ -75,6 +144,7 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({
         currentStreak: current,
         bestStreak: best,
         completionRate,
+        currentProgress: habit.currentProgress,
       };
     });
   }, [habits, checks]);

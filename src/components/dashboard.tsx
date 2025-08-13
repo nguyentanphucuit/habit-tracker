@@ -10,9 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { HabitList } from "@/components/habit-list";
+import { HabitColumns } from "@/components/habit-columns";
 import { AddHabitDialog } from "@/components/add-habit-dialog";
-import { FakeDataButton } from "@/components/fake-data-button";
+
 import { TimezoneDisplay } from "@/components/timezone-display";
 import { useHabits } from "@/contexts/habit-context";
 import { getToday } from "@/lib/habit-utils";
@@ -99,18 +99,15 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Fake Data Generator */}
-      <FakeDataButton />
-
-      {/* Today's Habits */}
+      {/* Habit Overview */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Calendar className="h-5 w-5" />
-            <span>Today&apos;s Habits</span>
+            <span>Habit Overview</span>
           </CardTitle>
           <CardDescription>
-            {today} - Mark off your daily progress
+            {today} - Organize and track your habits by frequency
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -126,7 +123,7 @@ export function Dashboard() {
               </Button>
             </div>
           ) : (
-            <HabitList habits={habitsWithChecks} />
+            <HabitColumns habits={habitsWithChecks} />
           )}
         </CardContent>
       </Card>

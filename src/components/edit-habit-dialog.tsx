@@ -1,14 +1,32 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useHabits } from '@/contexts/habit-context';
-import { HabitWithChecks, FREQUENCY_OPTIONS, DAYS_OF_WEEK, HABIT_COLORS } from '@/types/habit';
-import { getEmojiSuggestions } from '@/lib/habit-utils';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useHabits } from "@/contexts/habit-context";
+import {
+  HabitWithChecks,
+  FREQUENCY_OPTIONS,
+  DAYS_OF_WEEK,
+  HABIT_COLORS,
+} from "@/types/habit";
+import { getEmojiSuggestions } from "@/lib/habit-utils";
 
 interface EditHabitDialogProps {
   habit: HabitWithChecks;
@@ -16,41 +34,72 @@ interface EditHabitDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function EditHabitDialog({ habit, open, onOpenChange }: EditHabitDialogProps) {
+// Default empty habit object (constant, not a function)
+const DEFAULT_HABIT: HabitWithChecks = {
+  id: "",
+  name: "",
+  emoji: "🎯",
+  color: "#ef4444",
+  frequency: "daily",
+  startDate: new Date().toISOString().split("T")[0],
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  targetValue: 1,
+  targetType: "COUNT",
+  currentProgress: 0,
+  checks: [],
+  currentStreak: 0,
+  bestStreak: 0,
+  completionRate: 0,
+};
+
+export function EditHabitDialog({
+  habit,
+  open,
+  onOpenChange,
+}: EditHabitDialogProps) {
   const { updateHabit } = useHabits();
+
+  // Use the actual habit or default to empty habit
+  const currentHabit = habit || DEFAULT_HABIT;
+
   const [formData, setFormData] = useState({
-    name: habit.name,
-    emoji: habit.emoji,
-    color: habit.color,
-    frequency: habit.frequency,
-    customDays: habit.customDays || []
+    name: currentHabit.name,
+    emoji: currentHabit.emoji,
+    color: currentHabit.color,
+    frequency: currentHabit.frequency,
+    customDays: currentHabit.customDays || [],
+    targetValue: currentHabit.targetValue,
+    targetType: currentHabit.targetType,
   });
 
   useEffect(() => {
     setFormData({
-      name: habit.name,
-      emoji: habit.emoji,
-      color: habit.color,
-      frequency: habit.frequency,
-      customDays: habit.customDays || []
+      name: currentHabit.name,
+      emoji: currentHabit.emoji,
+      color: currentHabit.color,
+      frequency: currentHabit.frequency,
+      customDays: currentHabit.customDays || [],
+      targetValue: currentHabit.targetValue,
+      targetType: currentHabit.targetType,
     });
-  }, [habit]);
+  }, [currentHabit]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) return;
 
-    updateHabit(habit.id, formData);
+    updateHabit(currentHabit.id, formData);
     onOpenChange(false);
   };
 
   const toggleDay = (day: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       customDays: prev.customDays.includes(day)
-        ? prev.customDays.filter(d => d !== day)
-        : [...prev.customDays, day]
+        ? prev.customDays.filter((d) => d !== day)
+        : [...prev.customDays, day],
     }));
   };
 
@@ -70,7 +119,9 @@ export function EditHabitDialog({ habit, open, onOpenChange }: EditHabitDialogPr
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, name: e.target.value }))
+              }
               placeholder="e.g., Drink water, Read, Exercise"
               required
             />
@@ -84,13 +135,12 @@ export function EditHabitDialog({ habit, open, onOpenChange }: EditHabitDialogPr
                   <button
                     key={emoji}
                     type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, emoji }))}
+                    onClick={() => setFormData((prev) => ({ ...prev, emoji }))}
                     className={`w-10 h-10 rounded-lg border-2 text-lg transition-colors ${
                       formData.emoji === emoji
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/50"
+                    }`}>
                     {emoji}
                   </button>
                 ))}
@@ -104,11 +154,11 @@ export function EditHabitDialog({ habit, open, onOpenChange }: EditHabitDialogPr
                   <button
                     key={color}
                     type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, color }))}
+                    onClick={() => setFormData((prev) => ({ ...prev, color }))}
                     className={`w-10 h-10 rounded-full border-2 transition-colors ${
                       formData.color === color
-                        ? 'border-primary scale-110'
-                        : 'border-border hover:border-primary/50'
+                        ? "border-primary scale-110"
+                        : "border-border hover:border-primary/50"
                     }`}
                     style={{ backgroundColor: color }}
                   />
@@ -121,10 +171,9 @@ export function EditHabitDialog({ habit, open, onOpenChange }: EditHabitDialogPr
             <Label>Frequency</Label>
             <Select
               value={formData.frequency}
-              onValueChange={(value: 'daily' | 'custom') => 
-                setFormData(prev => ({ ...prev, frequency: value }))
-              }
-            >
+              onValueChange={(value: "daily" | "weekly" | "monthly") =>
+                setFormData((prev) => ({ ...prev, frequency: value }))
+              }>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -133,7 +182,9 @@ export function EditHabitDialog({ habit, open, onOpenChange }: EditHabitDialogPr
                   <SelectItem key={option.value} value={option.value}>
                     <div>
                       <div className="font-medium">{option.label}</div>
-                      <div className="text-sm text-muted-foreground">{option.description}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {option.description}
+                      </div>
                     </div>
                   </SelectItem>
                 ))}
@@ -141,7 +192,7 @@ export function EditHabitDialog({ habit, open, onOpenChange }: EditHabitDialogPr
             </Select>
           </div>
 
-          {formData.frequency === 'custom' && (
+          {formData.frequency === "weekly" && (
             <div className="space-y-2">
               <Label>Select Days</Label>
               <div className="flex space-x-1">
@@ -152,10 +203,9 @@ export function EditHabitDialog({ habit, open, onOpenChange }: EditHabitDialogPr
                     onClick={() => toggleDay(day.value)}
                     className={`w-10 h-10 rounded-lg border-2 text-sm font-medium transition-colors ${
                       formData.customDays.includes(day.value)
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                  >
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border hover:border-primary/50"
+                    }`}>
                     {day.short}
                   </button>
                 ))}
@@ -164,7 +214,10 @@ export function EditHabitDialog({ habit, open, onOpenChange }: EditHabitDialogPr
           )}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit">Save Changes</Button>

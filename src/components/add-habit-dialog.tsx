@@ -21,8 +21,9 @@ import {
 } from "@/components/ui/dialog";
 import { useHabits } from "@/contexts/habit-context";
 import { FREQUENCY_OPTIONS, DAYS_OF_WEEK, HABIT_COLORS } from "@/types/habit";
-import { getEmojiSuggestions, getRandomColor } from "@/lib/habit-utils";
+import { getEmojiSuggestions } from "@/lib/habit-utils";
 import { getToday } from "@/lib/habit-utils";
+import { DEFAULT_HABIT_FORM_DATA } from "@/lib/default-data";
 
 interface AddHabitDialogProps {
   open: boolean;
@@ -31,13 +32,7 @@ interface AddHabitDialogProps {
 
 export function AddHabitDialog({ open, onOpenChange }: AddHabitDialogProps) {
   const { addHabit } = useHabits();
-  const [formData, setFormData] = useState({
-    name: "",
-    emoji: "🎯",
-    color: getRandomColor(),
-    frequency: "daily" as "daily" | "custom" | "today",
-    customDays: [] as number[],
-  });
+  const [formData, setFormData] = useState(DEFAULT_HABIT_FORM_DATA);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,16 +42,11 @@ export function AddHabitDialog({ open, onOpenChange }: AddHabitDialogProps) {
     addHabit({
       ...formData,
       startDate: getToday(),
+      currentProgress: 0,
     });
 
     // Reset form
-    setFormData({
-      name: "",
-      emoji: "🎯",
-      color: getRandomColor(),
-      frequency: "daily",
-      customDays: [],
-    });
+    setFormData(DEFAULT_HABIT_FORM_DATA);
 
     onOpenChange(false);
   };
@@ -139,7 +129,7 @@ export function AddHabitDialog({ open, onOpenChange }: AddHabitDialogProps) {
             <Label>Frequency</Label>
             <Select
               value={formData.frequency}
-              onValueChange={(value: "daily" | "custom" | "today") =>
+              onValueChange={(value: "daily" | "weekly" | "monthly") =>
                 setFormData((prev) => ({ ...prev, frequency: value }))
               }>
               <SelectTrigger>
@@ -160,7 +150,44 @@ export function AddHabitDialog({ open, onOpenChange }: AddHabitDialogProps) {
             </Select>
           </div>
 
-          {formData.frequency === "custom" && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Target Type</Label>
+              <Select
+                value={formData.targetType}
+                onValueChange={(value: string) =>
+                  setFormData((prev) => ({ ...prev, targetType: value }))
+                }>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="COUNT">Count</SelectItem>
+                  <SelectItem value="MINUTES">Minutes</SelectItem>
+                  <SelectItem value="BOOLEAN">Boolean</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Target Value</Label>
+              <Input
+                type="number"
+                min="1"
+                value={formData.targetValue}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    targetValue: parseInt(e.target.value) || 1,
+                  }))
+                }
+                placeholder="e.g., 30"
+                required
+              />
+            </div>
+          </div>
+
+          {formData.frequency === "weekly" && (
             <div className="space-y-2">
               <Label>Select Days</Label>
               <div className="flex space-x-1">

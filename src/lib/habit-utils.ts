@@ -19,12 +19,12 @@ export function isDateEligible(habit: Habit, dateStr: string): boolean {
     return true;
   }
 
-  if (habit.frequency === "custom" && habit.customDays) {
+  if (habit.frequency === "weekly" && habit.customDays) {
     const dayOfWeek = date.getDay();
     return habit.customDays.includes(dayOfWeek);
   }
 
-  if (habit.frequency === "today") {
+  if (habit.frequency === "monthly") {
     return isToday(date);
   }
 

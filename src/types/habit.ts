@@ -3,11 +3,14 @@ export interface Habit {
   name: string;
   emoji: string;
   color: string;
-  frequency: "daily" | "custom" | "today";
+  frequency: "daily" | "weekly" | "monthly";
   customDays?: number[]; // 0-6 for Sunday-Saturday
   startDate: string; // ISO date string
   createdAt: string;
   updatedAt: string;
+  targetValue: number;
+  targetType: string;
+  currentProgress: number;
 }
 
 export interface HabitCheck {
@@ -22,6 +25,7 @@ export interface HabitWithChecks extends Habit {
   currentStreak: number;
   bestStreak: number;
   completionRate: number;
+  currentProgress: number;
 }
 
 export interface HabitStats {
@@ -44,16 +48,16 @@ export interface Settings {
 }
 
 export type FrequencyOption = {
-  value: "daily" | "custom" | "today";
+  value: "daily" | "weekly" | "monthly";
   label: string;
   description: string;
 };
 
 export const FREQUENCY_OPTIONS: FrequencyOption[] = [
   {
-    value: "today",
-    label: "Today",
-    description: "Just for today",
+    value: "monthly",
+    label: "Monthly",
+    description: "Once per month",
   },
   {
     value: "daily",
@@ -61,8 +65,8 @@ export const FREQUENCY_OPTIONS: FrequencyOption[] = [
     description: "Every day",
   },
   {
-    value: "custom",
-    label: "Custom",
+    value: "weekly",
+    label: "Weekly",
     description: "Select specific days",
   },
 ];
