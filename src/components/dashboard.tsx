@@ -13,6 +13,7 @@ import {
 import { HabitList } from "@/components/habit-list";
 import { AddHabitDialog } from "@/components/add-habit-dialog";
 import { FakeDataButton } from "@/components/fake-data-button";
+import { TimezoneDisplay } from "@/components/timezone-display";
 import { useHabits } from "@/contexts/habit-context";
 import { getToday } from "@/lib/habit-utils";
 
@@ -30,6 +31,7 @@ export function Dashboard() {
           <p className="text-muted-foreground">
             Track your daily and weekly habits to build a better routine
           </p>
+          <TimezoneDisplay />
         </div>
         <Button
           onClick={() => setShowAddDialog(true)}

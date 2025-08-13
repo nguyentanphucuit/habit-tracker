@@ -1,12 +1,13 @@
 import { format, isToday } from "date-fns";
 import { Habit, HabitCheck } from "@/types/habit";
+import { getVietnamTime, getTodayString, startOfDayVietnam } from "./time";
 
 export function getToday(): string {
-  return format(new Date(), "yyyy-MM-dd");
+  return getTodayString();
 }
 
 export function getYesterday(): string {
-  const yesterday = new Date();
+  const yesterday = new Date(getVietnamTime());
   yesterday.setDate(yesterday.getDate() - 1);
   return format(yesterday, "yyyy-MM-dd");
 }
@@ -59,7 +60,7 @@ export function calculateCompletionRate(
 ) {
   const recentChecks = checks.filter((check) => {
     const checkDate = new Date(check.date);
-    const cutoffDate = new Date();
+    const cutoffDate = startOfDayVietnam(new Date());
     cutoffDate.setDate(cutoffDate.getDate() - days);
     return checkDate >= cutoffDate;
   });

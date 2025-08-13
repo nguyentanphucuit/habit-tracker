@@ -3,6 +3,13 @@ const API_BASE = "http://localhost:3000/api/health";
 // Test data - replace userId with an actual user ID from your database
 const TEST_USER_ID = "cme8tf1gw0000lxna8mrub899"; // Replace with actual user ID
 
+// Vietnam timezone helper (UTC+7)
+function getVietnamTime() {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utc + 7 * 60 * 60000); // +7 hours for Vietnam
+}
+
 async function testHealthAPI() {
   console.log("🧪 Testing Apple Health API...\n");
 
@@ -11,7 +18,7 @@ async function testHealthAPI() {
   try {
     const healthData = {
       userId: TEST_USER_ID,
-      date: new Date().toISOString(),
+      date: getVietnamTime().toISOString(),
       steps: 8542,
       distance: 6500,
       caloriesBurned: 320,
@@ -83,11 +90,11 @@ async function testHealthAPI() {
   // Test GET with date range
   console.log("📅 Testing GET /api/health with date range...");
   try {
-    const startDate = new Date();
+    const startDate = getVietnamTime();
     startDate.setDate(startDate.getDate() - 7); // 7 days ago
 
     const response = await fetch(
-      `${API_BASE}?userId=${TEST_USER_ID}&startDate=${startDate.toISOString()}&endDate=${new Date().toISOString()}`
+      `${API_BASE}?userId=${TEST_USER_ID}&startDate=${startDate.toISOString()}&endDate=${getVietnamTime().toISOString()}`
     );
     const result = await response.json();
 
