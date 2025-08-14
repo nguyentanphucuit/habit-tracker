@@ -42,7 +42,6 @@ export function AddHabitDialog({ open, onOpenChange }: AddHabitDialogProps) {
     addHabit({
       ...formData,
       startDate: getToday(),
-      currentProgress: 0,
     });
 
     // Reset form

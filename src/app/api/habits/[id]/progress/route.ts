@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { addHabitProgress } from "@/lib/daily-progress-service";
 
 export async function PATCH(
   request: NextRequest,
@@ -12,30 +10,16 @@ export async function PATCH(
     const { progressToAdd } = await request.json();
     const habitId = params.id;
 
-    // Get current habit to calculate new progress
-    const currentHabit = await prisma.habit.findUnique({
-      where: { id: habitId },
-    });
+    // For now, we'll use a hardcoded userId since we don't have authentication yet
+    // In a real app, this would come from the authenticated user session
+    const userId = "cmebt23m00000lx4fekjp8yr4";
 
-    if (!currentHabit) {
-      return NextResponse.json({ error: "Habit not found" }, { status: 404 });
-    }
-
-    // Calculate new progress by ADDING to current progress
-    const newProgress = currentHabit.currentProgress + progressToAdd;
-
-    // Update the habit's current progress
-    const updatedHabit = await prisma.habit.update({
-      where: { id: habitId },
-      data: {
-        currentProgress: newProgress,
-        updatedAt: new Date(),
-      },
-    });
+    // Add progress using the daily progress service
+    const result = await addHabitProgress(userId, habitId, progressToAdd);
 
     return NextResponse.json({
       success: true,
-      habit: updatedHabit,
+      result,
     });
   } catch (error) {
     console.error("Error updating habit progress:", error);
@@ -43,7 +27,5 @@ export async function PATCH(
       { error: "Failed to update habit progress" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

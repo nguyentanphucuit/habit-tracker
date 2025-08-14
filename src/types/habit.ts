@@ -10,7 +10,6 @@ export interface Habit {
   updatedAt: string;
   targetValue: number;
   targetType: string;
-  currentProgress: number;
 }
 
 export interface HabitCheck {
@@ -25,8 +24,6 @@ export interface HabitWithChecks extends Habit {
   currentStreak: number;
   bestStreak: number;
   completionRate: number;
-  currentProgress: number;
-  isCompleted: boolean;
 }
 
 export interface HabitStats {

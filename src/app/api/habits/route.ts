@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 export async function GET() {
   try {
     // For now, use the seeded user ID - in production this would come from authentication
-    const userId = "cme8zhu8b0000lxuftjjba9db";
+    const userId = "cmebt23m00000lx4fekjp8yr4";
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -32,10 +32,8 @@ export async function GET() {
         frequency: true,
         targetValue: true,
         targetType: true,
-        currentProgress: true,
         createdAt: true,
         updatedAt: true,
-        habitChecks: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -47,10 +45,6 @@ export async function GET() {
         DAILY: "daily",
         WEEKLY: "weekly",
       } as const;
-
-      // Calculate current streak and completion rate
-      const currentStreak = calculateStreak(habit.habitChecks);
-      const completionRate = calculateCompletionRate(habit.habitChecks, 30);
 
       return {
         id: habit.id,
@@ -64,16 +58,10 @@ export async function GET() {
         updatedAt: habit.updatedAt.toISOString(),
         targetValue: habit.targetValue,
         targetType: habit.targetType,
-        currentProgress: habit.currentProgress,
-        checks: habit.habitChecks.map((check) => ({
-          habitId: check.habitId,
-          date: check.date,
-          completed: check.completed,
-          timestamp: check.timestamp,
-        })),
-        currentStreak,
-        bestStreak: currentStreak, // For now, use current as best
-        completionRate,
+        checks: [], // Empty array since we don't use HabitCheck anymore
+        currentStreak: 0, // Will be calculated from daily progress
+        bestStreak: 0, // Will be calculated from daily progress
+        completionRate: 0, // Will be calculated from daily progress
       };
     });
 
@@ -90,40 +78,4 @@ export async function GET() {
   } finally {
     await prisma.$disconnect();
   }
-}
-
-// Helper function to calculate streak
-function calculateStreak(checks: { completed: boolean; date: string }[]) {
-  let current = 0;
-  const sortedChecks = checks
-    .filter((check) => check.completed)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  for (const check of sortedChecks) {
-    if (check.completed) {
-      current++;
-    } else {
-      break;
-    }
-  }
-  return current;
-}
-
-// Helper function to calculate completion rate
-function calculateCompletionRate(
-  checks: { completed: boolean; date: string }[],
-  days: number = 30
-) {
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - days);
-
-  const recentChecks = checks.filter((check) => {
-    const checkDate = new Date(check.date);
-    return checkDate >= cutoffDate;
-  });
-
-  const completed = recentChecks.filter((check) => check.completed).length;
-  return recentChecks.length > 0
-    ? Math.round((completed / recentChecks.length) * 100)
-    : 0;
 }

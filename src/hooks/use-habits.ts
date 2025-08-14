@@ -14,7 +14,6 @@ interface ApiHabit {
   updatedAt: string;
   targetValue: number;
   targetType: string;
-  currentProgress: number;
   checks: ApiHabitCheck[];
   currentStreak: number;
   bestStreak: number;
@@ -47,7 +46,6 @@ const transformHabits = (apiHabits: ApiHabit[]): Habit[] => {
     updatedAt: habit.updatedAt,
     targetValue: habit.targetValue,
     targetType: habit.targetType,
-    currentProgress: habit.currentProgress,
   }));
 };
 
@@ -71,20 +69,12 @@ const transformHabitsWithChecks = (
   return habits.map((habit) => {
     const habitChecks = checks.filter((check) => check.habitId === habit.id);
 
-    // Calculate completion status
-    const isCompleted = habit.currentProgress >= habit.targetValue;
-    const completionRate = Math.min(
-      Math.round((habit.currentProgress / habit.targetValue) * 100),
-      100
-    );
-
     return {
       ...habit,
       checks: habitChecks,
       currentStreak: 0, // You can calculate this based on your logic
       bestStreak: 0, // You can calculate this based on your logic
-      completionRate: isCompleted ? 100 : completionRate,
-      isCompleted, // Add completion status
+      completionRate: 0, // This will be calculated from daily progress
     };
   });
 };
@@ -173,32 +163,69 @@ export const useUpdateHabitProgress = () => {
     onSuccess: (data, variables) => {
       // Force refetch to ensure UI is up to date
       queryClient.invalidateQueries({ queryKey: ["habits"] });
-
-      // Also update the cache immediately with the new data
-      queryClient.setQueryData(
-        ["habits"],
-        (old: { habits: Habit[]; checks: HabitCheck[] } | undefined) => {
-          if (!old) return old;
-
-          return {
-            ...old,
-            habits: old.habits.map((habit: Habit) =>
-              habit.id === variables.habitId
-                ? {
-                    ...habit,
-                    currentProgress:
-                      habit.currentProgress + variables.progressToAdd,
-                  }
-                : habit
-            ),
-          };
-        }
-      );
+      // Also invalidate daily progress queries
+      queryClient.invalidateQueries({ queryKey: ["dailyProgress"] });
     },
     onError: (error) => {
       console.error("Failed to update progress:", error);
       // Refetch to ensure UI shows correct state
       queryClient.invalidateQueries({ queryKey: ["habits"] });
     },
+  });
+};
+
+// Hook for getting habit progress from daily progress
+export const useHabitProgress = (
+  habitId: string,
+  userId: string = "default-user",
+  date?: Date
+) => {
+  const {
+    data: dailyProgress,
+    isLoading,
+    error,
+  } = useDailyProgress(userId, date);
+
+  if (dailyProgress && dailyProgress.habitsData) {
+    const habitProgress = dailyProgress.habitsData[habitId];
+    return {
+      data: habitProgress || { currentProgress: 0, isCompleted: false },
+      isLoading,
+      error,
+    };
+  }
+
+  return {
+    data: { currentProgress: 0, isCompleted: false },
+    isLoading,
+    error,
+  };
+};
+
+// Hook for fetching daily progress
+export const useDailyProgress = (
+  userId: string = "default-user",
+  date?: Date
+) => {
+  const queryKey = date
+    ? ["dailyProgress", userId, date.toISOString().split("T")[0]]
+    : ["dailyProgress", userId];
+
+  return useQuery({
+    queryKey,
+    queryFn: async () => {
+      const url = new URL("/api/daily-progress", window.location.origin);
+      url.searchParams.set("userId", userId);
+      if (date) {
+        url.searchParams.set("date", date.toISOString());
+      }
+
+      const response = await fetch(url.toString());
+      if (!response.ok) {
+        throw new Error("Failed to fetch daily progress");
+      }
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 };

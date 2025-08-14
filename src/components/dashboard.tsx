@@ -8,6 +8,7 @@ import { AddHabitDialog } from "@/components/add-habit-dialog";
 
 import { TimezoneDisplay } from "@/components/timezone-display";
 import { useHabitsWithChecks } from "@/hooks/use-habits";
+import { CompactDatePicker } from "@/components/compact-date-picker";
 
 export function Dashboard() {
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -31,6 +32,14 @@ export function Dashboard() {
           <span>Add Habit</span>
         </Button>
       </div>
+
+      {/* Date Picker */}
+      <CompactDatePicker
+        habits={habitsWithChecks || []}
+        onDateChange={(date) => {
+          console.log("Selected date:", date);
+        }}
+      />
 
       {/* Habit Overview */}
       <HabitColumns />

@@ -41,11 +41,6 @@ model Habit {
   targetType      TargetType
   targetValue     Int
   active          Boolean        @default(true)
-  currentProgress Int            @default(0)
-  isCompleted     Boolean        @default(false)
-  lastUpdated     DateTime       @default(now())
-  totalProgress   Int            @default(0)
-  lastResetDate   DateTime       @default(now())
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   habitChecks     HabitCheck[]
@@ -53,7 +48,6 @@ model Habit {
   @@unique([userId, name])
   @@index([userId])
   @@index([active])
-  @@index([lastResetDate])
 }
 
 model DailyProgress {

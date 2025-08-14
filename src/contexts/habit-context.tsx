@@ -31,7 +31,6 @@ interface ApiHabit {
   updatedAt: string;
   targetValue: number;
   targetType: string;
-  currentProgress: number;
   checks: ApiHabitCheck[];
   currentStreak: number;
   bestStreak: number;
@@ -103,7 +102,6 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({
               updatedAt: habit.updatedAt,
               targetValue: habit.targetValue,
               targetType: habit.targetType,
-              currentProgress: habit.currentProgress,
             }));
 
             // Extract checks from habits
@@ -142,17 +140,12 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({
       const { current, best } = calculateStreak(habit, habitChecks);
       const completionRate = calculateCompletionRate(habit, habitChecks, 30);
 
-      // Calculate completion status
-      const isCompleted = habit.currentProgress >= habit.targetValue;
-
       return {
         ...habit,
         checks: habitChecks,
         currentStreak: current,
         bestStreak: best,
         completionRate,
-        currentProgress: habit.currentProgress,
-        isCompleted,
       };
     });
   }, [habits, checks]);

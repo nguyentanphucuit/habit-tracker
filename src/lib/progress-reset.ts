@@ -25,25 +25,11 @@ export async function checkAndResetDailyProgress() {
     for (const user of users) {
       // Save daily progress snapshot before resetting
       await saveDailyProgressSnapshot(user.id);
-
-      // Reset current progress for all active habits
-      await prisma.habit.updateMany({
-        where: {
-          userId: user.id,
-          active: true,
-        },
-        data: {
-          currentProgress: 0,
-          isCompleted: false,
-          lastUpdated: new Date(),
-          lastResetDate: today,
-        },
-      });
     }
 
-    console.log(`✅ Daily progress reset completed for ${users.length} users`);
+    console.log(`✅ Daily progress snapshots saved for ${users.length} users`);
   } catch (error) {
-    console.error("❌ Error resetting daily progress:", error);
+    console.error("❌ Error saving daily progress snapshots:", error);
   }
 }
 

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { HabitWithChecks } from "@/types/habit";
-import { useUpdateHabitProgress } from "@/hooks/use-habits";
+import { useUpdateHabitProgress, useHabitProgress } from "@/hooks/use-habits";
 
 interface HabitCardProps {
   habit: HabitWithChecks;
@@ -16,6 +16,15 @@ export function HabitCard({ habit }: HabitCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [progressInput, setProgressInput] = useState("");
   const updateProgress = useUpdateHabitProgress();
+
+  // Get progress data from daily progress
+  const { data: progressData, isLoading: progressLoading } = useHabitProgress(
+    habit.id
+  );
+
+  // Get progress data from daily progress or use defaults
+  const currentProgress = progressData?.currentProgress || 0;
+  const isCompleted = progressData?.isCompleted || false;
 
   const handleProgressUpdate = async (progressToAdd: string) => {
     try {
@@ -33,6 +42,17 @@ export function HabitCard({ habit }: HabitCardProps) {
       console.error("Failed to update progress:", error);
     }
   };
+
+  if (progressLoading) {
+    return (
+      <div className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors mb-3">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors mb-3">
@@ -78,20 +98,17 @@ export function HabitCard({ habit }: HabitCardProps) {
             <span>Progress</span>
             <div className="flex items-center space-x-2">
               <span>
-                {habit.currentProgress}/{habit.targetValue}{" "}
+                {currentProgress}/{habit.targetValue}{" "}
                 {habit.targetType?.toLowerCase()}
               </span>
-              {habit.isCompleted && (
+              {isCompleted && (
                 <span className="text-green-600 font-medium">✓</span>
               )}
             </div>
           </div>
           <Progress
-            value={Math.min(
-              (habit.currentProgress / habit.targetValue) * 100,
-              100
-            )}
-            className={`h-2 ${habit.isCompleted ? "bg-green-100" : ""}`}
+            value={Math.min((currentProgress / habit.targetValue) * 100, 100)}
+            className={`h-2 ${isCompleted ? "bg-green-100" : ""}`}
           />
 
           {/* Progress Update Section */}
@@ -102,7 +119,7 @@ export function HabitCard({ habit }: HabitCardProps) {
                   <Input
                     type="number"
                     min="1"
-                    max={habit.targetValue - habit.currentProgress}
+                    max={habit.targetValue - currentProgress}
                     value={progressInput}
                     onChange={(e) => setProgressInput(e.target.value)}
                     placeholder="1"
@@ -130,15 +147,15 @@ export function HabitCard({ habit }: HabitCardProps) {
             ) : (
               <Button
                 size="sm"
-                variant={habit.isCompleted ? "default" : "outline"}
+                variant={isCompleted ? "default" : "outline"}
                 onClick={() => setIsEditing(true)}
-                disabled={habit.isCompleted}
+                disabled={isCompleted}
                 className={`w-full h-8 ${
-                  habit.isCompleted
+                  isCompleted
                     ? "bg-green-500 hover:bg-green-600 text-white"
                     : ""
                 }`}>
-                {habit.isCompleted ? (
+                {isCompleted ? (
                   <>
                     <Check className="h-3 w-3 mr-1" />
                     Completed

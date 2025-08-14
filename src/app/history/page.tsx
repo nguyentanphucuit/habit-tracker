@@ -12,8 +12,6 @@ interface HabitData {
   frequency: string;
   targetType: string;
   targetValue: number;
-  currentProgress: number;
-  isCompleted: boolean;
   lastUpdated: string;
 }
 
@@ -214,15 +212,9 @@ export default function HistoryPage() {
                     </div>
                     <div className="text-right">
                       <div className="font-medium">
-                        {habit.currentProgress}/{habit.targetValue}
+                        {habit.targetType} • {habit.targetValue}
                       </div>
-                      <Badge
-                        variant={habit.isCompleted ? "default" : "secondary"}
-                        className={
-                          habit.isCompleted ? "bg-green-100 text-green-800" : ""
-                        }>
-                        {habit.isCompleted ? "✅ Done" : "🔄 In Progress"}
-                      </Badge>
+                      <Badge variant="secondary">{habit.frequency}</Badge>
                     </div>
                   </div>
                 ))}

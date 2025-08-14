@@ -1,5 +1,6 @@
 import { startOfDay, endOfDay, subDays } from "date-fns";
 import { prisma } from "./prisma";
+import { Prisma } from "@prisma/client";
 
 interface HabitProgressData {
   id: string;
@@ -22,9 +23,6 @@ interface HabitRecord {
   frequency: string;
   targetType: string;
   targetValue: number;
-  currentProgress: number;
-  isCompleted: boolean;
-  lastUpdated: Date;
 }
 
 interface ProgressRecord {
@@ -55,9 +53,6 @@ export async function saveDailyProgressSnapshot(userId: string) {
         frequency: true,
         targetType: true,
         targetValue: true,
-        currentProgress: true,
-        isCompleted: true,
-        lastUpdated: true,
       },
     });
 
@@ -75,9 +70,9 @@ export async function saveDailyProgressSnapshot(userId: string) {
         frequency: habit.frequency,
         targetType: habit.targetType,
         targetValue: habit.targetValue,
-        currentProgress: habit.currentProgress,
-        isCompleted: habit.isCompleted,
-        lastUpdated: habit.lastUpdated,
+        currentProgress: 0, // Default to 0 since we don't store this on habits anymore
+        isCompleted: false, // Default to false since we don't store this on habits anymore
+        lastUpdated: new Date(), // Use current date
       };
     });
 
@@ -293,6 +288,133 @@ export async function getHabitProgressOnDate(
     return habitsData[habitUuid] || null;
   } catch (error) {
     console.error("Error fetching habit progress on date:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get all habits progress for a specific date
+ */
+export async function getHabitsProgressOnDate(userId: string, date: Date) {
+  try {
+    const progress = await prisma.dailyProgress.findUnique({
+      where: {
+        userId_date: {
+          userId,
+          date: startOfDay(date),
+        },
+      },
+    });
+
+    if (!progress) {
+      return {};
+    }
+
+    const habitsData = progress.habitsData as unknown as DailyProgressByHabitId;
+    return habitsData;
+  } catch (error) {
+    console.error("Error fetching habits progress on date:", error);
+    throw error;
+  }
+}
+
+/**
+ * Add progress to a habit for the current day
+ * This function updates the daily progress data instead of the habit directly
+ */
+export async function addHabitProgress(
+  userId: string,
+  habitId: string,
+  progressToAdd: number
+) {
+  const today = startOfDay(new Date());
+
+  try {
+    // Get the habit details
+    const habit = await prisma.habit.findUnique({
+      where: { id: habitId },
+      select: {
+        id: true,
+        name: true,
+        frequency: true,
+        targetType: true,
+        targetValue: true,
+      },
+    });
+
+    if (!habit) {
+      throw new Error("Habit not found");
+    }
+
+    // Get existing daily progress for today
+    const dailyProgress = await prisma.dailyProgress.findUnique({
+      where: {
+        userId_date: {
+          userId,
+          date: today,
+        },
+      },
+    });
+
+    let habitsData: DailyProgressByHabitId = {};
+
+    if (dailyProgress) {
+      // Parse existing data
+      habitsData =
+        dailyProgress.habitsData as unknown as DailyProgressByHabitId;
+    }
+
+    // Get or create habit progress for today
+    const existingHabitProgress = habitsData[habitId];
+    const currentProgress = existingHabitProgress?.currentProgress || 0;
+    const newProgress = currentProgress + progressToAdd;
+    const isCompleted = newProgress >= habit.targetValue;
+
+    // Update the habit's progress for today
+    habitsData[habitId] = {
+      id: habit.id,
+      name: habit.name,
+      frequency: habit.frequency,
+      targetType: habit.targetType,
+      targetValue: habit.targetValue,
+      currentProgress: newProgress,
+      isCompleted,
+      lastUpdated: new Date(),
+    };
+
+    // Save the updated daily progress
+    if (dailyProgress) {
+      await prisma.dailyProgress.update({
+        where: { id: dailyProgress.id },
+        data: {
+          habitsData: habitsData as unknown as Prisma.InputJsonValue,
+        },
+      });
+    } else {
+      await prisma.dailyProgress.create({
+        data: {
+          userId,
+          date: today,
+          habitsData: habitsData as unknown as Prisma.InputJsonValue,
+        },
+      });
+    }
+
+    console.log(
+      `📈 Added ${progressToAdd} progress to habit ${
+        habit.name
+      } for ${today.toDateString()}`
+    );
+
+    return {
+      success: true,
+      habitId,
+      newProgress,
+      isCompleted,
+      date: today,
+    };
+  } catch (error) {
+    console.error("Error adding habit progress:", error);
     throw error;
   }
 }

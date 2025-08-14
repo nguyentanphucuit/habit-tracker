@@ -15,43 +15,26 @@ import { HabitCard } from "./habit-card";
 import { useHabitsWithChecks } from "@/hooks/use-habits";
 import { HabitWithChecks } from "@/types/habit";
 
-export function HabitColumns() {
-  const { data: habitsWithChecks, isLoading, error } = useHabitsWithChecks();
+export function HabitColumns({ habits }: { habits?: HabitWithChecks[] }) {
+  const { data: defaultHabits, isLoading, error } = useHabitsWithChecks();
 
-  // Categorize habits by new frequency system (exclude completed habits)
+  // Use provided habits or fall back to fetched habits
+  const habitsWithChecks = habits || defaultHabits || [];
+
+  // Categorize habits by frequency (show all habits since completion is handled by daily progress)
   const dailyHabits = habitsWithChecks.filter(
-    (habit: HabitWithChecks) =>
-      habit.frequency === "daily" && !habit.isCompleted
+    (habit: HabitWithChecks) => habit.frequency === "daily"
   );
   const weeklyHabits = habitsWithChecks.filter(
-    (habit: HabitWithChecks) =>
-      habit.frequency === "weekly" && !habit.isCompleted
+    (habit: HabitWithChecks) => habit.frequency === "weekly"
   );
   const monthlyHabits = habitsWithChecks.filter(
-    (habit: HabitWithChecks) =>
-      habit.frequency === "monthly" && !habit.isCompleted
+    (habit: HabitWithChecks) => habit.frequency === "monthly"
   );
-
-  // Handle error state
-  if (error) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-center">
-          <div className="h-12 w-12 mx-auto mb-4 text-red-500">⚠️</div>
-          <p className="text-lg font-medium text-red-600 mb-2">
-            Error loading habits
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {error instanceof Error ? error.message : "Something went wrong"}
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
-      {isLoading ? (
+      {isLoading && !habits ? (
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-muted-foreground" />
@@ -63,20 +46,34 @@ export function HabitColumns() {
             </p>
           </div>
         </div>
+      ) : error && !habits ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="h-12 w-12 mx-auto mb-4 text-red-500">⚠️</div>
+            <p className="text-lg font-medium text-red-600 mb-2">
+              Error loading habits
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {error instanceof Error ? error.message : "Something went wrong"}
+            </p>
+          </div>
+        </div>
       ) : habitsWithChecks.length === 0 ? (
         <div className="text-center py-20">
           <div className="text-center">
             <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-lg font-medium text-muted-foreground">
-              No habits yet
+              {habits ? "No habits for selected date" : "No habits yet"}
             </p>
             <p className="text-sm text-muted-foreground">
-              Create your first habit to start tracking your progress
+              {habits
+                ? "Try selecting a different date or create some habits"
+                : "Create your first habit to start tracking your progress"}
             </p>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Daily Habits Column */}
           <Card>
             <CardHeader className="pb-3">
@@ -148,32 +145,6 @@ export function HabitColumns() {
                 monthlyHabits.map((habit) => (
                   <HabitCard key={habit.id} habit={habit} />
                 ))
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Done/Completed Habits Column */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center space-x-2 text-lg">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <span>Done</span>
-                <Badge variant="secondary" className="ml-auto">
-                  {habitsWithChecks.filter((habit) => habit.isCompleted).length}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {habitsWithChecks.filter((habit) => habit.isCompleted).length ===
-              0 ? (
-                <div className="text-center py-6 text-muted-foreground">
-                  <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No completed habits</p>
-                </div>
-              ) : (
-                habitsWithChecks
-                  .filter((habit) => habit.isCompleted)
-                  .map((habit) => <HabitCard key={habit.id} habit={habit} />)
               )}
             </CardContent>
           </Card>

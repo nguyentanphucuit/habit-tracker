@@ -46,12 +46,10 @@ const DEFAULT_HABIT: HabitWithChecks = {
   updatedAt: new Date().toISOString(),
   targetValue: 1,
   targetType: "COUNT",
-  currentProgress: 0,
   checks: [],
   currentStreak: 0,
   bestStreak: 0,
   completionRate: 0,
-  isCompleted: false,
 };
 
 export function EditHabitDialog({
