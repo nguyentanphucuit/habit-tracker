@@ -41,92 +41,21 @@ export function Dashboard() {
         </Button>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Habits</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalHabits}</div>
-            <p className="text-xs text-muted-foreground">Active habits</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Completed Today
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.completedToday}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.totalHabits > 0
-                ? `${Math.round(
-                    (stats.completedToday / stats.totalHabits) * 100
-                  )}%`
-                : "0%"}{" "}
-              of daily goal
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">7-Day Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.completionRate7Days}%
-            </div>
-            <p className="text-xs text-muted-foreground">Weekly completion</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Best Streak</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.bestStreak}</div>
-            <p className="text-xs text-muted-foreground">Longest streak</p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Habit Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Calendar className="h-5 w-5" />
-            <span>Habit Overview</span>
-          </CardTitle>
-          <CardDescription>
-            {today} - Organize and track your habits by frequency
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {habitsWithChecks.length === 0 ? (
-            <div className="text-center py-8">
-              <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No habits yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Create your first habit to start tracking your progress
-              </p>
-              <Button onClick={() => setShowAddDialog(true)}>
-                Create Your First Habit
-              </Button>
-            </div>
-          ) : (
-            <HabitColumns habits={habitsWithChecks} />
-          )}
-        </CardContent>
-      </Card>
+      {habitsWithChecks.length === 0 ? (
+        <div className="text-center py-8">
+          <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">No habits yet</h3>
+          <p className="text-muted-foreground mb-4">
+            Create your first habit to start tracking your progress
+          </p>
+          <Button onClick={() => setShowAddDialog(true)}>
+            Create Your First Habit
+          </Button>
+        </div>
+      ) : (
+        <HabitColumns habits={habitsWithChecks} />
+      )}
 
       <AddHabitDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
     </div>
