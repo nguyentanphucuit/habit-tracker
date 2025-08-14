@@ -55,6 +55,7 @@ interface HabitContextType {
   checks: HabitCheck[];
   stats: HabitStats;
   habitsWithChecks: HabitWithChecks[];
+  isLoading: boolean;
   addHabit: (habit: Omit<Habit, "id" | "createdAt" | "updatedAt">) => void;
   updateHabit: (id: string, updates: Partial<Habit>) => void;
   deleteHabit: (id: string) => void;
@@ -79,6 +80,7 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({
   const [habits, setHabits] = useState<Habit[]>([]);
   const [checks, setChecks] = useState<HabitCheck[]>([]);
   const [stats, setStats] = useState<HabitStats>(DEFAULT_HABIT_STATS);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Load data from API on mount
   useEffect(() => {
@@ -125,6 +127,8 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({
         const savedChecks = storage.getChecks();
         setHabits(savedHabits);
         setChecks(savedChecks);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -252,6 +256,7 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({
     checks,
     stats,
     habitsWithChecks,
+    isLoading,
     addHabit,
     updateHabit,
     deleteHabit,
