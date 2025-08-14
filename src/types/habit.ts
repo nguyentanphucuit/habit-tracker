@@ -26,6 +26,7 @@ export interface HabitWithChecks extends Habit {
   bestStreak: number;
   completionRate: number;
   currentProgress: number;
+  isCompleted: boolean;
 }
 
 export interface HabitStats {

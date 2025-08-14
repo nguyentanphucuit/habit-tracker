@@ -142,6 +142,9 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({
       const { current, best } = calculateStreak(habit, habitChecks);
       const completionRate = calculateCompletionRate(habit, habitChecks, 30);
 
+      // Calculate completion status
+      const isCompleted = habit.currentProgress >= habit.targetValue;
+
       return {
         ...habit,
         checks: habitChecks,
@@ -149,6 +152,7 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({
         bestStreak: best,
         completionRate,
         currentProgress: habit.currentProgress,
+        isCompleted,
       };
     });
   }, [habits, checks]);

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { HabitProvider } from "@/contexts/habit-context";
+import { QueryProvider } from "@/components/providers/query-provider";
 import { Navigation } from "@/components/navigation";
 
 const geistSans = Geist({
@@ -28,17 +29,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
-      >
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
         <ThemeProvider>
-          <HabitProvider>
-            <div className="min-h-screen flex flex-col">
-              <Navigation />
-              <main className="flex-1 container mx-auto px-4 py-6">
-                {children}
-              </main>
-            </div>
-          </HabitProvider>
+          <QueryProvider>
+            <HabitProvider>
+              <div className="min-h-screen flex flex-col">
+                <Navigation />
+                <main className="flex-1 container mx-auto px-4 py-4">
+                  {children}
+                </main>
+              </div>
+            </HabitProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

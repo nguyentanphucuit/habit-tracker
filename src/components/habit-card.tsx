@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { HabitWithChecks } from "@/types/habit";
-import { useHabits } from "@/contexts/habit-context";
+import { useUpdateHabitProgress } from "@/hooks/use-habits";
 
 interface HabitCardProps {
   habit: HabitWithChecks;
@@ -15,26 +15,20 @@ interface HabitCardProps {
 export function HabitCard({ habit }: HabitCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [progressInput, setProgressInput] = useState("");
-  const { updateHabit } = useHabits();
+  const updateProgress = useUpdateHabitProgress();
 
-  const handleProgressUpdate = async (newProgress: string) => {
+  const handleProgressUpdate = async (progressToAdd: string) => {
     try {
-      const response = await fetch(`/api/habits/${habit.id}/progress`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ currentProgress: parseInt(newProgress) || 0 }),
+      const progressValue = parseInt(progressToAdd) || 0;
+
+      await updateProgress.mutateAsync({
+        habitId: habit.id,
+        progressToAdd: progressValue,
       });
 
-      if (response.ok) {
-        // Update local state through context
-        updateHabit(habit.id, { currentProgress: parseInt(newProgress) || 0 });
-
-        // Reset editing state
-        setIsEditing(false);
-        setProgressInput("");
-      }
+      // Reset editing state
+      setIsEditing(false);
+      setProgressInput("");
     } catch (error) {
       console.error("Failed to update progress:", error);
     }
@@ -82,34 +76,45 @@ export function HabitCard({ habit }: HabitCardProps) {
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Progress</span>
-            <span>
-              {habit.currentProgress}/{habit.targetValue}{" "}
-              {habit.targetType?.toLowerCase()}
-            </span>
+            <div className="flex items-center space-x-2">
+              <span>
+                {habit.currentProgress}/{habit.targetValue}{" "}
+                {habit.targetType?.toLowerCase()}
+              </span>
+              {habit.isCompleted && (
+                <span className="text-green-600 font-medium">✓</span>
+              )}
+            </div>
           </div>
           <Progress
-            value={(habit.currentProgress / habit.targetValue) * 100}
-            className="h-2"
+            value={Math.min(
+              (habit.currentProgress / habit.targetValue) * 100,
+              100
+            )}
+            className={`h-2 ${habit.isCompleted ? "bg-green-100" : ""}`}
           />
 
           {/* Progress Update Section */}
           <div className="flex items-center justify-center">
             {isEditing ? (
               <div className="flex items-center space-x-2 w-full">
-                <Input
-                  type="number"
-                  min="0"
-                  max={habit.targetValue}
-                  value={progressInput}
-                  onChange={(e) => setProgressInput(e.target.value)}
-                  placeholder={`0-${habit.targetValue}`}
-                  className="h-8 text-xs flex-1"
-                />
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    min="1"
+                    max={habit.targetValue - habit.currentProgress}
+                    value={progressInput}
+                    onChange={(e) => setProgressInput(e.target.value)}
+                    placeholder="1"
+                    className="h-8 text-xs"
+                  />
+                </div>
                 <Button
                   size="sm"
-                  onClick={() => handleProgressUpdate(progressInput || "0")}
-                  className="h-8 px-2 text-xs">
-                  ✓
+                  onClick={() => handleProgressUpdate(progressInput || "1")}
+                  disabled={updateProgress.isPending}
+                  className="h-8 px-3 text-xs">
+                  {updateProgress.isPending ? "..." : "Add"}
                 </Button>
                 <Button
                   size="sm"
@@ -125,21 +130,24 @@ export function HabitCard({ habit }: HabitCardProps) {
             ) : (
               <Button
                 size="sm"
-                variant={
-                  habit.currentProgress === habit.targetValue - 1
-                    ? "default"
-                    : "outline"
-                }
+                variant={habit.isCompleted ? "default" : "outline"}
                 onClick={() => setIsEditing(true)}
+                disabled={habit.isCompleted}
                 className={`w-full h-8 ${
-                  habit.currentProgress === habit.targetValue - 1
+                  habit.isCompleted
                     ? "bg-green-500 hover:bg-green-600 text-white"
                     : ""
                 }`}>
-                {habit.currentProgress === habit.targetValue - 1 ? (
-                  <Check className="h-3 w-3" />
+                {habit.isCompleted ? (
+                  <>
+                    <Check className="h-3 w-3 mr-1" />
+                    Completed
+                  </>
                 ) : (
-                  <Plus className="h-3 w-3" />
+                  <>
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add Progress
+                  </>
                 )}
               </Button>
             )}

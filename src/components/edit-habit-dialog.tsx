@@ -51,6 +51,7 @@ const DEFAULT_HABIT: HabitWithChecks = {
   currentStreak: 0,
   bestStreak: 0,
   completionRate: 0,
+  isCompleted: false,
 };
 
 export function EditHabitDialog({

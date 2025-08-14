@@ -12,21 +12,42 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { HabitCard } from "./habit-card";
-import { useHabits } from "@/contexts/habit-context";
+import { useHabitsWithChecks } from "@/hooks/use-habits";
+import { HabitWithChecks } from "@/types/habit";
 
 export function HabitColumns() {
-  const { habitsWithChecks, isLoading } = useHabits();
+  const { data: habitsWithChecks, isLoading, error } = useHabitsWithChecks();
 
-  // Categorize habits by new frequency system
+  // Categorize habits by new frequency system (exclude completed habits)
   const dailyHabits = habitsWithChecks.filter(
-    (habit) => habit.frequency === "daily"
+    (habit: HabitWithChecks) =>
+      habit.frequency === "daily" && !habit.isCompleted
   );
   const weeklyHabits = habitsWithChecks.filter(
-    (habit) => habit.frequency === "weekly"
+    (habit: HabitWithChecks) =>
+      habit.frequency === "weekly" && !habit.isCompleted
   );
   const monthlyHabits = habitsWithChecks.filter(
-    (habit) => habit.frequency === "monthly"
+    (habit: HabitWithChecks) =>
+      habit.frequency === "monthly" && !habit.isCompleted
   );
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="h-12 w-12 mx-auto mb-4 text-red-500">⚠️</div>
+          <p className="text-lg font-medium text-red-600 mb-2">
+            Error loading habits
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {error instanceof Error ? error.message : "Something went wrong"}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -138,15 +159,22 @@ export function HabitColumns() {
                 <CheckCircle className="h-5 w-5 text-green-500" />
                 <span>Done</span>
                 <Badge variant="secondary" className="ml-auto">
-                  0
+                  {habitsWithChecks.filter((habit) => habit.isCompleted).length}
                 </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-6 text-muted-foreground">
-                <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No completed habits</p>
-              </div>
+              {habitsWithChecks.filter((habit) => habit.isCompleted).length ===
+              0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No completed habits</p>
+                </div>
+              ) : (
+                habitsWithChecks
+                  .filter((habit) => habit.isCompleted)
+                  .map((habit) => <HabitCard key={habit.id} habit={habit} />)
+              )}
             </CardContent>
           </Card>
         </div>

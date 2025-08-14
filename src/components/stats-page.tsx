@@ -8,12 +8,77 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useHabits } from "@/contexts/habit-context";
+import { useHabitsWithChecks } from "@/hooks/use-habits";
 import { HeatmapCalendar } from "./heatmap-calendar";
 import { StatsOverview } from "./stats-overview";
 
 export function StatsPage() {
-  const { stats, habitsWithChecks } = useHabits();
+  const { data: habitsWithChecks, isLoading, error } = useHabitsWithChecks();
+
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="h-12 w-12 animate-spin mx-auto mb-4 border-4 border-primary border-t-transparent rounded-full"></div>
+          <p className="text-lg font-medium text-muted-foreground">
+            Loading statistics...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <div className="h-12 w-12 mx-auto mb-4 text-red-500">⚠️</div>
+          <p className="text-lg font-medium text-red-600 mb-2">
+            Error loading statistics
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {error instanceof Error ? error.message : "Something went wrong"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate stats from habits data
+  const stats = {
+    totalHabits: habitsWithChecks.length,
+    completedToday: habitsWithChecks.filter((habit) =>
+      habit.checks.some(
+        (check) =>
+          check.date === new Date().toISOString().split("T")[0] &&
+          check.completed
+      )
+    ).length,
+    completionRate7Days:
+      habitsWithChecks.length > 0
+        ? Math.round(
+            habitsWithChecks.reduce(
+              (sum, habit) => sum + habit.completionRate,
+              0
+            ) / habitsWithChecks.length
+          )
+        : 0,
+    completionRate30Days:
+      habitsWithChecks.length > 0
+        ? Math.round(
+            habitsWithChecks.reduce(
+              (sum, habit) => sum + habit.completionRate,
+              0
+            ) / habitsWithChecks.length
+          )
+        : 0,
+    bestStreak:
+      habitsWithChecks.length > 0
+        ? Math.max(...habitsWithChecks.map((habit) => habit.bestStreak))
+        : 0,
+  };
 
   return (
     <div className="space-y-6">

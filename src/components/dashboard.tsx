@@ -7,11 +7,11 @@ import { HabitColumns } from "@/components/habit-columns";
 import { AddHabitDialog } from "@/components/add-habit-dialog";
 
 import { TimezoneDisplay } from "@/components/timezone-display";
-import { useHabits } from "@/contexts/habit-context";
+import { useHabitsWithChecks } from "@/hooks/use-habits";
 
 export function Dashboard() {
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const { habitsWithChecks } = useHabits();
+  const { data: habitsWithChecks } = useHabitsWithChecks();
 
   return (
     <div className="space-y-6">
