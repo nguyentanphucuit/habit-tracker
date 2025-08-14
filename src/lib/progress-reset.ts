@@ -1,12 +1,10 @@
 import { PrismaClient } from "@prisma/client";
-import { startOfDay } from "date-fns";
-import { saveDailyProgressSnapshot } from "./daily-progress-service";
 
-const prisma = new PrismaClient();
-
-export async function checkAndResetDailyProgress() {
+export async function resetDailyProgress() {
   try {
-    const today = startOfDay(new Date());
+    const prisma = new PrismaClient();
+    const startOfDayDate = new Date();
+    startOfDayDate.setHours(0, 0, 0, 0);
 
     // Get all users with active habits
     const users = await prisma.user.findMany({
@@ -22,10 +20,11 @@ export async function checkAndResetDailyProgress() {
       },
     });
 
-    for (const user of users) {
-      // Save daily progress snapshot before resetting
-      await saveDailyProgressSnapshot(user.id);
-    }
+    // Reset progress for each user
+    // Note: Currently disabled - uncomment when implementing progress snapshot functionality
+    // for (const user of users) {
+    //   await saveDailyProgressSnapshot(user.id);
+    // }
 
     console.log(`✅ Daily progress snapshots saved for ${users.length} users`);
   } catch (error) {

@@ -1,5 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Habit, HabitCheck, HabitWithChecks } from "@/types/habit";
+import {
+  Habit,
+  HabitCheck,
+  HabitWithChecks,
+  HabitWithProgress,
+} from "@/types/habit";
+import { useMemo } from "react";
 
 // API response types
 interface ApiHabit {
@@ -135,23 +141,25 @@ export const useHabitsWithChecks = () => {
 };
 
 // Hook for updating habit progress
-export const useUpdateHabitProgress = () => {
+export const useUpdateHabitProgress = (currentDate?: Date) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
       habitId,
       progressToAdd,
+      date,
     }: {
       habitId: string;
       progressToAdd: number;
+      date?: string; // Changed from Date to string
     }) => {
       const response = await fetch(`/api/habits/${habitId}/progress`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ progressToAdd }),
+        body: JSON.stringify({ progressToAdd, date }),
       });
 
       if (!response.ok) {
@@ -160,16 +168,22 @@ export const useUpdateHabitProgress = () => {
 
       return response.json();
     },
-    onSuccess: (data, variables) => {
-      // Force refetch to ensure UI is up to date
-      queryClient.invalidateQueries({ queryKey: ["habits"] });
-      // Also invalidate daily progress queries
+    onSuccess: () => {
+      // Invalidate the specific daily progress query for the current date
+      if (currentDate) {
+        const dateString = currentDate.toISOString().split("T")[0];
+        queryClient.invalidateQueries({
+          queryKey: ["dailyProgress", "cmebt23m00000lx4fekjp8yr4", dateString],
+        });
+      }
+
+      // Also invalidate all daily progress queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["dailyProgress"] });
+      // Also invalidate habits queries
+      queryClient.invalidateQueries({ queryKey: ["habits"] });
     },
     onError: (error) => {
       console.error("Failed to update progress:", error);
-      // Refetch to ensure UI shows correct state
-      queryClient.invalidateQueries({ queryKey: ["habits"] });
     },
   });
 };
@@ -177,7 +191,7 @@ export const useUpdateHabitProgress = () => {
 // Hook for getting habit progress from daily progress
 export const useHabitProgress = (
   habitId: string,
-  userId: string = "default-user",
+  userId: string = "cmebt23m00000lx4fekjp8yr4",
   date?: Date
 ) => {
   const {
@@ -204,7 +218,7 @@ export const useHabitProgress = (
 
 // Hook for fetching daily progress
 export const useDailyProgress = (
-  userId: string = "default-user",
+  userId: string = "cmebt23m00000lx4fekjp8yr4",
   date?: Date
 ) => {
   const queryKey = date
@@ -217,7 +231,9 @@ export const useDailyProgress = (
       const url = new URL("/api/daily-progress", window.location.origin);
       url.searchParams.set("userId", userId);
       if (date) {
-        url.searchParams.set("date", date.toISOString());
+        // Send only the date part (YYYY-MM-DD) not the full ISO string
+        const dateString = date.toISOString().split("T")[0];
+        url.searchParams.set("date", dateString);
       }
 
       const response = await fetch(url.toString());
@@ -226,6 +242,206 @@ export const useDailyProgress = (
       }
       return response.json();
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 0, // Always refetch when requested
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Refetch when component mounts
   });
+};
+
+// Hook for fetching weekly progress (for weekly habits)
+export const useWeeklyProgress = (
+  userId: string = "cmebt23m00000lx4fekjp8yr4",
+  date?: Date
+) => {
+  const queryKey = date
+    ? ["weeklyProgress", userId, getWeekKey(date)]
+    : ["weeklyProgress", userId];
+
+  return useQuery({
+    queryKey,
+    queryFn: async () => {
+      if (!date) return { habitsData: {} };
+
+      // Get the start and end of the week
+      const weekStart = getWeekStart(date);
+      const weekEnd = getWeekEnd(date);
+
+      // Fetch progress for each day of the week
+      const weekProgress: Record<
+        string,
+        {
+          id: string;
+          name: string;
+          frequency: string;
+          targetType: string;
+          isCompleted: boolean;
+          lastUpdated: string;
+          targetValue: number;
+          currentProgress: number;
+        }
+      > = {};
+
+      for (
+        let d = new Date(weekStart);
+        d <= weekEnd;
+        d.setDate(d.getDate() + 1)
+      ) {
+        const dateString = d.toISOString().split("T")[0];
+        const url = new URL("/api/daily-progress", window.location.origin);
+        url.searchParams.set("userId", userId);
+        url.searchParams.set("date", dateString);
+
+        try {
+          const response = await fetch(url.toString());
+          if (response.ok) {
+            const data = await response.json();
+            if (data.habitsData) {
+              // Merge progress data for the week
+              Object.keys(data.habitsData).forEach((habitId) => {
+                if (!weekProgress[habitId]) {
+                  weekProgress[habitId] = { ...data.habitsData[habitId] };
+                } else {
+                  // For weekly habits, if completed on any day, mark as completed for the week
+                  if (data.habitsData[habitId].isCompleted) {
+                    weekProgress[habitId].isCompleted = true;
+                    weekProgress[habitId].currentProgress = Math.max(
+                      weekProgress[habitId].currentProgress,
+                      data.habitsData[habitId].currentProgress
+                    );
+                  }
+                }
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching progress for ${dateString}:`, error);
+        }
+      }
+
+      return { habitsData: weekProgress };
+    },
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+  });
+};
+
+// Helper function to get week start (Monday)
+function getWeekStart(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+  return new Date(d.setDate(diff));
+}
+
+// Helper function to get week end (Sunday)
+function getWeekEnd(date: Date): Date {
+  const weekStart = getWeekStart(date);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  return weekEnd;
+}
+
+// Helper function to get week key for caching
+function getWeekKey(date: Date): string {
+  const weekStart = getWeekStart(date);
+  return weekStart.toISOString().split("T")[0];
+}
+
+// Hook for fetching habits with progress for a specific date
+export const useHabitsWithProgressForDate = (
+  date: Date,
+  userId: string = "cmebt23m00000lx4fekjp8yr4"
+) => {
+  const {
+    data: habitsData,
+    isLoading: habitsLoading,
+    error: habitsError,
+    refetch: refetchHabits,
+  } = useHabits();
+  const {
+    data: dailyProgress,
+    isLoading: progressLoading,
+    error: progressError,
+    refetch: refetchProgress,
+  } = useDailyProgress(userId, date);
+  const {
+    data: weeklyProgress,
+    isLoading: weeklyProgressLoading,
+    error: weeklyProgressError,
+    refetch: refetchWeeklyProgress,
+  } = useWeeklyProgress(userId, date);
+
+  // Combine habits with their progress for the specific date
+  const habitsWithProgress = useMemo((): HabitWithProgress[] => {
+    console.log("🔍 useHabitsWithProgressForDate - Data combination:");
+    console.log("  - habitsData:", habitsData);
+    console.log("  - dailyProgress:", dailyProgress);
+    console.log("  - weeklyProgress:", weeklyProgress);
+
+    if (!habitsData?.habits || !dailyProgress?.habitsData) {
+      console.log("  - Missing data, returning empty array");
+      return [];
+    }
+
+    const result = habitsData.habits.map((habit) => {
+      let habitProgress = dailyProgress.habitsData[habit.id];
+      let isCompleted = habitProgress?.isCompleted || false;
+      let currentProgress = habitProgress?.currentProgress || 0;
+      let lastUpdated = habitProgress?.lastUpdated || null;
+
+      // For weekly habits, check weekly progress instead of daily
+      if (habit.frequency === "weekly" && weeklyProgress?.habitsData) {
+        const weeklyHabitProgress = weeklyProgress.habitsData[habit.id];
+        if (weeklyHabitProgress) {
+          habitProgress = weeklyHabitProgress;
+          isCompleted = weeklyHabitProgress.isCompleted || false;
+          currentProgress = weeklyHabitProgress.currentProgress || 0;
+          lastUpdated = weeklyHabitProgress.lastUpdated || null;
+        }
+      }
+
+      const habitChecks = habitsData.checks.filter(
+        (check) => check.habitId === habit.id
+      );
+
+      const habitWithProgress = {
+        ...habit,
+        checks: habitChecks,
+        currentStreak: 0, // Will be calculated from daily progress
+        bestStreak: 0, // Will be calculated from daily progress
+        completionRate: 0, // Will be calculated from daily progress
+        // Add progress data for the specific date/week
+        currentProgress,
+        isCompleted,
+        lastUpdated,
+      };
+
+      console.log(`  - Habit ${habit.name} (${habit.id}):`, {
+        frequency: habit.frequency,
+        dailyProgress: dailyProgress.habitsData[habit.id],
+        weeklyProgress: weeklyProgress?.habitsData?.[habit.id],
+        final: habitWithProgress,
+      });
+
+      return habitWithProgress;
+    });
+
+    console.log("  - Final result:", result);
+    return result;
+  }, [habitsData, dailyProgress, weeklyProgress]);
+
+  // Combined refetch function
+  const refetch = () => {
+    refetchHabits();
+    refetchProgress();
+    refetchWeeklyProgress();
+  };
+
+  return {
+    data: habitsWithProgress,
+    isLoading: habitsLoading || progressLoading || weeklyProgressLoading,
+    error: habitsError || progressError || weeklyProgressError,
+    refetch,
+  };
 };

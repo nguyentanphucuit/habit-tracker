@@ -26,6 +26,17 @@ export interface HabitWithChecks extends Habit {
   completionRate: number;
 }
 
+export interface HabitWithProgress extends Habit {
+  checks: HabitCheck[];
+  currentStreak: number;
+  bestStreak: number;
+  completionRate: number;
+  // Progress data for a specific date
+  currentProgress: number;
+  isCompleted: boolean;
+  lastUpdated: Date | null;
+}
+
 export interface HabitStats {
   totalHabits: number;
   completedToday: number;

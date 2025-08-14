@@ -1,18 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Target } from "lucide-react";
+import { useState, Suspense } from "react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HabitColumns } from "@/components/habit-columns";
 import { AddHabitDialog } from "@/components/add-habit-dialog";
-
 import { TimezoneDisplay } from "@/components/timezone-display";
-import { useHabitsWithChecks } from "@/hooks/use-habits";
-import { CompactDatePicker } from "@/components/compact-date-picker";
+import { DashboardContent } from "@/components/dashboard-content";
 
 export function Dashboard() {
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const { data: habitsWithChecks } = useHabitsWithChecks();
 
   return (
     <div className="space-y-6">
@@ -33,16 +29,22 @@ export function Dashboard() {
         </Button>
       </div>
 
-      {/* Date Picker */}
-      <CompactDatePicker
-        habits={habitsWithChecks || []}
-        onDateChange={(date) => {
-          console.log("Selected date:", date);
-        }}
-      />
-
-      {/* Habit Overview */}
-      <HabitColumns />
+      {/* Dashboard Content with Suspense */}
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="h-12 w-12 mx-auto mb-4 text-muted-foreground">
+                ⏳
+              </div>
+              <p className="text-lg font-medium text-muted-foreground">
+                Loading dashboard...
+              </p>
+            </div>
+          </div>
+        }>
+        <DashboardContent />
+      </Suspense>
 
       <AddHabitDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
     </div>

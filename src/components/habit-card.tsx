@@ -5,34 +5,36 @@ import { Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { HabitWithChecks } from "@/types/habit";
-import { useUpdateHabitProgress, useHabitProgress } from "@/hooks/use-habits";
+import { HabitWithProgress } from "@/types/habit";
+import { useUpdateHabitProgress } from "@/hooks/use-habits";
 
 interface HabitCardProps {
-  habit: HabitWithChecks;
+  habit: HabitWithProgress;
+  selectedDate?: Date;
 }
 
-export function HabitCard({ habit }: HabitCardProps) {
+export function HabitCard({ habit, selectedDate }: HabitCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [progressInput, setProgressInput] = useState("");
-  const updateProgress = useUpdateHabitProgress();
+  const updateProgress = useUpdateHabitProgress(selectedDate);
 
-  // Get progress data from daily progress
-  const { data: progressData, isLoading: progressLoading } = useHabitProgress(
-    habit.id
-  );
-
-  // Get progress data from daily progress or use defaults
-  const currentProgress = progressData?.currentProgress || 0;
-  const isCompleted = progressData?.isCompleted || false;
+  // Use progress data from the habit (which comes from the selected date)
+  const currentProgress = habit.currentProgress || 0;
+  const isCompleted = habit.isCompleted || false;
 
   const handleProgressUpdate = async (progressToAdd: string) => {
     try {
       const progressValue = parseInt(progressToAdd) || 0;
 
+      // Convert the date to YYYY-MM-DD string to avoid timezone issues
+      const dateString = selectedDate
+        ? selectedDate.toISOString().split("T")[0]
+        : undefined;
+
       await updateProgress.mutateAsync({
         habitId: habit.id,
         progressToAdd: progressValue,
+        date: dateString, // Send the date as YYYY-MM-DD string
       });
 
       // Reset editing state
@@ -43,35 +45,47 @@ export function HabitCard({ habit }: HabitCardProps) {
     }
   };
 
-  if (progressLoading) {
-    return (
-      <div className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors mb-3">
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors mb-3">
+    <div
+      className={`p-4 rounded-lg border mb-3 transition-colors ${
+        isCompleted
+          ? "bg-green-50 border-green-200 hover:bg-green-100"
+          : "bg-card hover:bg-accent/50 border-border"
+      }`}>
       {/* Header with emoji, name, and actions */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-3">
           <div
-            className="w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
+            className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0 ${
+              isCompleted ? "ring-2 ring-green-300" : ""
+            }`}
             style={{ backgroundColor: `${habit.color}20` }}>
             {habit.emoji}
           </div>
           <div className="min-w-0">
-            <h4 className="font-semibold text-base overflow-ellipsis">
+            <h4
+              className={`font-semibold text-base overflow-ellipsis ${
+                isCompleted ? "text-green-800" : ""
+              }`}>
               {habit.name}
             </h4>
+            {isCompleted && (
+              <div className="flex items-center space-x-1 mt-1">
+                <span className="text-xs text-green-600 font-medium">
+                  ✓ Completed
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center space-x-2"></div>
+        <div className="flex items-center space-x-2">
+          {isCompleted && (
+            <div className="h-6 w-6 rounded-full bg-green-500 flex items-center justify-center">
+              <span className="text-white text-xs">✓</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Habit Details */}

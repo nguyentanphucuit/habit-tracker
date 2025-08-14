@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { startOfDay } from "date-fns";
 import {
-  getHabitProgressOnDate,
   getProgressSummary,
   getHabitsProgressOnDate,
 } from "@/lib/daily-progress-service";
@@ -13,7 +13,15 @@ export async function GET(request: NextRequest) {
     const date = searchParams.get("date");
 
     // Use today's date if no date specified
-    const targetDate = date ? new Date(date) : new Date();
+    let targetDate: Date;
+    if (date) {
+      // Parse the date string and ensure it's at the start of the day in local timezone
+      const [year, month, day] = date.split("-").map(Number);
+      targetDate = new Date(year, month - 1, day); // month is 0-indexed
+      targetDate = startOfDay(targetDate);
+    } else {
+      targetDate = startOfDay(new Date());
+    }
 
     try {
       // If a specific date is requested, get progress for that date
@@ -22,6 +30,11 @@ export async function GET(request: NextRequest) {
           userId,
           targetDate
         );
+
+        console.log("🔍 Daily Progress API - Returning data:");
+        console.log("  - date requested:", date);
+        console.log("  - targetDate:", targetDate);
+        console.log("  - habitsProgress:", habitsProgress);
 
         return NextResponse.json({
           success: true,
