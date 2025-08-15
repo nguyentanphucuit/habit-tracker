@@ -1,14 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getVietnamTime, formatTime, formatDate } from "@/lib/time";
+import { DEFAULT_TIMEZONE } from "@/lib/default-data";
+import { formatTime, formatDate } from "@/lib/time";
 
 export function TimezoneDisplay() {
-  const [currentTime, setCurrentTime] = useState<Date>(getVietnamTime());
+  const [currentTime, setCurrentTime] = useState<Date>(
+    DEFAULT_TIMEZONE.getCurrentTime()
+  );
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentTime(getVietnamTime());
+      setCurrentTime(DEFAULT_TIMEZONE.getCurrentTime());
     }, 1000);
 
     return () => clearInterval(timer);

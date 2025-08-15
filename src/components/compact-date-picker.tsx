@@ -19,6 +19,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { DEFAULT_TIMEZONE } from "@/lib/default-data";
 
 interface CompactDatePickerProps {
   onDateChange?: (date: Date) => void;
@@ -31,8 +32,8 @@ export function CompactDatePicker({
 }: CompactDatePickerProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [centerDate, setCenterDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(DEFAULT_TIMEZONE.getCurrentTime());
+  const [centerDate, setCenterDate] = useState<Date>(DEFAULT_TIMEZONE.getCurrentTime());
   const [dateKey, setDateKey] = useState(0);
   const [isTodayClicked, setIsTodayClicked] = useState(false);
   const [visibleDatesCount, setVisibleDatesCount] = useState(7);
@@ -67,7 +68,7 @@ export function CompactDatePicker({
         setSelectedDate(parsedDate);
         setCenterDate(parsedDate);
       } catch {
-        const today = new Date();
+        const today = DEFAULT_TIMEZONE.getCurrentTime(); // Use default timezone instead of local time
         setSelectedDate(today);
         setCenterDate(today);
       }
@@ -100,7 +101,7 @@ export function CompactDatePicker({
   // Helper function to calculate days difference from today
   const getDaysDifference = (date: Date) => {
     return Math.floor(
-      (date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      (date.getTime() - DEFAULT_TIMEZONE.getCurrentTime().getTime()) / (1000 * 60 * 60 * 24)
     );
   };
 
@@ -155,7 +156,7 @@ export function CompactDatePicker({
   };
 
   const goToToday = async () => {
-    const today = new Date();
+    const today = DEFAULT_TIMEZONE.getCurrentTime(); // Use default timezone instead of local time
     setSelectedDate(today);
     setCenterDate(today);
     await updateURL(today);
@@ -204,8 +205,8 @@ export function CompactDatePicker({
                   selected={selectedDate}
                   onSelect={handleCalendarSelect}
                   initialFocus
-                  fromDate={subDays(new Date(), 30)}
-                  toDate={addDays(new Date(), 30)}
+                  fromDate={subDays(DEFAULT_TIMEZONE.getCurrentTime(), 30)}
+                  toDate={addDays(DEFAULT_TIMEZONE.getCurrentTime(), 30)}
                   defaultMonth={selectedDate}
                   disabled={(date) => {
                     const daysDiff = getDaysDifference(date);

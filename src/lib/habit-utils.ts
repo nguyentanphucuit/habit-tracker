@@ -1,6 +1,6 @@
 import { format, isToday } from "date-fns";
 import { Habit, HabitCheck } from "@/types/habit";
-import { getVietnamTime, getTodayString, startOfDayVietnam } from "./time";
+import { getTodayString, startOfDayVietnam } from "./time";
 import { DEFAULT_TIMEZONE } from "./default-data";
 
 export function getToday(): string {
@@ -8,7 +8,7 @@ export function getToday(): string {
 }
 
 export function getYesterday(): string {
-  const yesterday = new Date(getVietnamTime());
+  const yesterday = new Date(DEFAULT_TIMEZONE.getCurrentTime());
   yesterday.setDate(yesterday.getDate() - 1);
   return format(yesterday, "yyyy-MM-dd");
 }
