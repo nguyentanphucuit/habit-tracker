@@ -9,19 +9,24 @@ import {
 } from "react";
 import { format, subDays, eachDayOfInterval } from "date-fns";
 import { HabitWithChecks } from "@/types/habit";
-import { DEFAULT_USER } from "@/lib/default-data";
+import { DEFAULT_USER, DEFAULT_TIMEZONE } from "@/lib/default-data";
 import { formatVietnamTime } from "@/lib/time";
 
 // Helper function to get Vietnam timezone date
 function getVietnamDate(date: Date = new Date()): Date {
-  // We're already in Vietnam timezone (GMT+7), so just return the date as-is
-  return date;
+  // Convert to Vietnam timezone
+  return DEFAULT_TIMEZONE.fromUTC(date);
 }
 
 // Helper function to get start of day in Vietnam timezone
 function startOfDayVietnam(date: Date): Date {
-  // We're already in Vietnam timezone, so just get start of day
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  // Ensure we're working with Vietnam timezone dates
+  const vietnamDate = DEFAULT_TIMEZONE.fromUTC(date);
+  return new Date(
+    vietnamDate.getFullYear(),
+    vietnamDate.getMonth(),
+    vietnamDate.getDate()
+  );
 }
 
 // Interface for habit data from daily progress
@@ -63,16 +68,34 @@ export const HeatmapCalendar = forwardRef<
   const fetchDailyProgress = async () => {
     try {
       setIsLoading(true);
-      // Ensure we include the full day of today by setting end date to end of day
-      const endDate = new Date();
-      endDate.setHours(23, 59, 59, 999); // Set to end of day
-      const startDate = subDays(new Date(), 29); // Go back 29 days to get 30 days total including today
+      // Use Vietnam timezone for date calculations
+      const today = DEFAULT_TIMEZONE.getCurrentTime();
+
+      // Create end date at end of day in Vietnam timezone
+      const endDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        23,
+        59,
+        59,
+        999
+      );
+
+      // Calculate start date by going back 29 days in Vietnam timezone
+      const startDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() - 29
+      );
 
       console.log("🔍 API Request Date Range:", {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         startDateFormatted: format(startDate, "yyyy-MM-dd"),
         endDateFormatted: format(endDate, "yyyy-MM-dd"),
+        vietnamToday: today.toISOString(),
+        localToday: new Date().toISOString(),
       });
 
       const params = new URLSearchParams({
@@ -102,7 +125,10 @@ export const HeatmapCalendar = forwardRef<
               date: string;
               habitsData: Record<string, DailyProgressHabit>;
             }) => {
-              const dateStr = format(new Date(progress.date), "yyyy-MM-dd");
+              // Parse the date and convert to Vietnam timezone for consistent formatting
+              const parsedDate = new Date(progress.date);
+              const vietnamDate = DEFAULT_TIMEZONE.fromUTC(parsedDate);
+              const dateStr = format(vietnamDate, "yyyy-MM-dd");
               const habitsData = progress.habitsData || {};
               const habitsArray = Object.values(habitsData);
 
@@ -199,10 +225,22 @@ export const HeatmapCalendar = forwardRef<
   };
 
   const calendarData = useMemo(() => {
-    // Generate exactly 30 days including today
-    const today = new Date();
-    const endDate = startOfDayVietnam(today);
-    const startDate = startOfDayVietnam(subDays(today, 29)); // 29 days ago + today = 30 days total
+    // Generate exactly 30 days including today using Vietnam timezone
+    const today = DEFAULT_TIMEZONE.getCurrentTime();
+
+    // Create dates in Vietnam timezone by manually calculating days
+    const endDate = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    // Calculate start date by going back 29 days in Vietnam timezone
+    const startDate = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() - 29
+    );
 
     console.log("🔍 Calendar Date Range:", {
       startDate: startDate.toISOString(),
@@ -212,6 +250,8 @@ export const HeatmapCalendar = forwardRef<
       daysDifference: Math.ceil(
         (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
       ),
+      vietnamToday: today.toISOString(),
+      localToday: new Date().toISOString(),
     });
 
     const days = eachDayOfInterval({ start: startDate, end: endDate });

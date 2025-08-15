@@ -32,8 +32,12 @@ export function CompactDatePicker({
 }: CompactDatePickerProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [selectedDate, setSelectedDate] = useState<Date>(DEFAULT_TIMEZONE.getCurrentTime());
-  const [centerDate, setCenterDate] = useState<Date>(DEFAULT_TIMEZONE.getCurrentTime());
+  const [selectedDate, setSelectedDate] = useState<Date>(
+    DEFAULT_TIMEZONE.getCurrentTime()
+  );
+  const [centerDate, setCenterDate] = useState<Date>(
+    DEFAULT_TIMEZONE.getCurrentTime()
+  );
   const [dateKey, setDateKey] = useState(0);
   const [isTodayClicked, setIsTodayClicked] = useState(false);
   const [visibleDatesCount, setVisibleDatesCount] = useState(7);
@@ -100,8 +104,20 @@ export function CompactDatePicker({
 
   // Helper function to calculate days difference from today
   const getDaysDifference = (date: Date) => {
+    const today = DEFAULT_TIMEZONE.getCurrentTime();
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const dateStart = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    );
+
     return Math.floor(
-      (date.getTime() - DEFAULT_TIMEZONE.getCurrentTime().getTime()) / (1000 * 60 * 60 * 24)
+      (dateStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24)
     );
   };
 
@@ -122,9 +138,13 @@ export function CompactDatePicker({
     const dates = [];
 
     for (let i = -datesToShow; i <= datesToShow; i++) {
+      // Create date in Vietnam timezone
       const date = new Date(centerDate);
       date.setDate(centerDate.getDate() + i);
-      dates.push(date);
+
+      // Ensure the date is properly set in Vietnam timezone
+      const vietnamDate = DEFAULT_TIMEZONE.fromUTC(date);
+      dates.push(vietnamDate);
     }
 
     return dates;
@@ -139,18 +159,22 @@ export function CompactDatePicker({
 
   const goToPrevious = async () => {
     const newCenterDate = subDays(centerDate, 7);
-    setCenterDate(newCenterDate);
+    // Ensure the new date is in Vietnam timezone
+    const vietnamDate = DEFAULT_TIMEZONE.fromUTC(newCenterDate);
+    setCenterDate(vietnamDate);
     // Also update the selected date to the center of the new range
-    const newSelectedDate = new Date(newCenterDate);
+    const newSelectedDate = new Date(vietnamDate);
     setSelectedDate(newSelectedDate);
     await updateURL(newSelectedDate);
   };
 
   const goToNext = async () => {
     const newCenterDate = addDays(centerDate, 7);
-    setCenterDate(newCenterDate);
+    // Ensure the new date is in Vietnam timezone
+    const vietnamDate = DEFAULT_TIMEZONE.fromUTC(newCenterDate);
+    setCenterDate(vietnamDate);
     // Also update the selected date to the center of the new range
-    const newSelectedDate = new Date(newCenterDate);
+    const newSelectedDate = new Date(vietnamDate);
     setSelectedDate(newSelectedDate);
     await updateURL(newSelectedDate);
   };

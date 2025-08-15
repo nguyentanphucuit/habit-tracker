@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { HabitColumns } from "@/components/habit-columns";
 import { CompactDatePicker } from "@/components/compact-date-picker";
+import { HealthOverview } from "@/components/health-overview";
 import { useHabitsWithProgressForDate } from "@/hooks/use-habits";
 import { DEFAULT_TIMEZONE } from "@/lib/default-data";
 
@@ -20,7 +21,9 @@ export function DashboardContent() {
   }, [dateParam]);
 
   const selectedDate = useMemo(() => {
-    return currentDate ? new Date(currentDate) : DEFAULT_TIMEZONE.getCurrentTime();
+    return currentDate
+      ? new Date(currentDate)
+      : DEFAULT_TIMEZONE.getCurrentTime();
   }, [currentDate]);
 
   // Fetch habits with progress for the selected date

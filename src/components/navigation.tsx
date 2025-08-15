@@ -9,7 +9,7 @@ import {
   Moon,
   Sun,
   Monitor,
-  History,
+  Heart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/contexts/theme-context";
@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
-  { name: "History", href: "/history", icon: History },
+  { name: "Health", href: "/health", icon: Heart },
   { name: "Stats", href: "/stats", icon: BarChart3 },
   { name: "Settings", href: "/settings", icon: Settings },
 ];

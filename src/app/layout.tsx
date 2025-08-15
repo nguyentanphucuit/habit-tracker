@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { HabitProvider } from "@/contexts/habit-context";
+import { HealthProvider } from "@/contexts/health-context";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { Navigation } from "@/components/navigation";
 
@@ -33,12 +34,14 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <HabitProvider>
-              <div className="min-h-screen flex flex-col">
-                <Navigation />
-                <main className="flex-1 container mx-auto px-4 py-4">
-                  {children}
-                </main>
-              </div>
+              <HealthProvider>
+                <div className="min-h-screen flex flex-col">
+                  <Navigation />
+                  <main className="flex-1 container mx-auto px-4 py-4">
+                    {children}
+                  </main>
+                </div>
+              </HealthProvider>
             </HabitProvider>
           </QueryProvider>
         </ThemeProvider>
