@@ -103,8 +103,8 @@ export const HeatmapCalendar = forwardRef<
 
       const params = new URLSearchParams({
         userId,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
+        startDate: format(startDate, "yyyy-MM-dd"),
+        endDate: format(endDate, "yyyy-MM-dd"),
       });
 
       // Fetch directly from daily-progress API to get daily habit data
