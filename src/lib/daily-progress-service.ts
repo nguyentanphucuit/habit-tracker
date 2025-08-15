@@ -51,7 +51,12 @@ interface ProgressRecord {
  * This should be called at the end of each day or when resetting progress
  */
 export async function saveDailyProgressSnapshot(userId: string) {
-  const today = startOfDayVietnam(new Date());
+  const today = DEFAULT_TIMEZONE.getCurrentTime();
+  const todayStartOfDay = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
 
   try {
     // Get all active habits for the user
@@ -94,7 +99,7 @@ export async function saveDailyProgressSnapshot(userId: string) {
       where: {
         userId_date: {
           userId,
-          date: today,
+          date: todayStartOfDay,
         },
       },
       update: {
@@ -103,7 +108,7 @@ export async function saveDailyProgressSnapshot(userId: string) {
       },
       create: {
         userId,
-        date: today,
+        date: todayStartOfDay,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         habitsData: habitsData as any,
       },
@@ -116,7 +121,7 @@ export async function saveDailyProgressSnapshot(userId: string) {
     return {
       savedCount: habits.length,
       message: `Saved progress for ${habits.length} habits`,
-      date: today,
+      date: todayStartOfDay,
       habitsData,
     };
   } catch (error) {

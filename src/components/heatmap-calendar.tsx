@@ -96,6 +96,8 @@ export const HeatmapCalendar = forwardRef<
         endDateFormatted: format(endDate, "yyyy-MM-dd"),
         vietnamToday: today.toISOString(),
         localToday: new Date().toISOString(),
+        timezoneOffset: today.getTimezoneOffset(),
+        vietnamOffset: 7 * 60, // Vietnam is UTC+7
       });
 
       const params = new URLSearchParams({
@@ -109,6 +111,12 @@ export const HeatmapCalendar = forwardRef<
 
       if (response.ok) {
         const data = await response.json();
+        console.log("🔍 API Response:", {
+          success: data.success,
+          dataCount: data.data?.length || 0,
+          rawData: data.data,
+        });
+
         if (data.success && data.data) {
           // Transform the daily progress data into a date-indexed map
           const progressMap: {
@@ -129,6 +137,15 @@ export const HeatmapCalendar = forwardRef<
               const parsedDate = new Date(progress.date);
               const vietnamDate = DEFAULT_TIMEZONE.fromUTC(parsedDate);
               const dateStr = format(vietnamDate, "yyyy-MM-dd");
+
+              console.log("🔍 Processing Progress Date:", {
+                originalDate: progress.date,
+                parsedDate: parsedDate.toISOString(),
+                vietnamDate: vietnamDate.toISOString(),
+                formattedDateStr: dateStr,
+                habitsCount: Object.keys(progress.habitsData || {}).length,
+              });
+
               const habitsData = progress.habitsData || {};
               const habitsArray = Object.values(habitsData);
 
