@@ -117,7 +117,7 @@ export const HeatmapCalendar = forwardRef<
           dataCount: data.data?.length || 0,
           rawData: data.data,
         });
-        console.log(params);
+        console.log(startDate, endDate);
 
         if (data.success && data.data) {
           // Transform the daily progress data into a date-indexed map
