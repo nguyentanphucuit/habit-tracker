@@ -6,6 +6,7 @@ import {
   HabitWithProgress,
 } from "@/types/habit";
 import { useMemo } from "react";
+import { DEFAULT_USER } from "@/lib/default-data";
 
 // API response types
 interface ApiHabit {
@@ -173,7 +174,7 @@ export const useUpdateHabitProgress = (currentDate?: Date) => {
       if (currentDate) {
         const dateString = currentDate.toISOString().split("T")[0];
         queryClient.invalidateQueries({
-          queryKey: ["dailyProgress", "cmebt23m00000lx4fekjp8yr4", dateString],
+          queryKey: ["dailyProgress", DEFAULT_USER.id, dateString],
         });
       }
 
@@ -181,6 +182,10 @@ export const useUpdateHabitProgress = (currentDate?: Date) => {
       queryClient.invalidateQueries({ queryKey: ["dailyProgress"] });
       // Also invalidate habits queries
       queryClient.invalidateQueries({ queryKey: ["habits"] });
+
+      // Invalidate stats queries so heatmap and stats page refresh immediately
+      // This ensures weekly habit updates are reflected in the UI right away
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
     },
     onError: (error) => {
       console.error("Failed to update progress:", error);
@@ -191,7 +196,7 @@ export const useUpdateHabitProgress = (currentDate?: Date) => {
 // Hook for getting habit progress from daily progress
 export const useHabitProgress = (
   habitId: string,
-  userId: string = "cmebt23m00000lx4fekjp8yr4",
+  userId: string = DEFAULT_USER.id,
   date?: Date
 ) => {
   const {
@@ -218,21 +223,35 @@ export const useHabitProgress = (
 
 // Hook for fetching daily progress
 export const useDailyProgress = (
-  userId: string = "cmebt23m00000lx4fekjp8yr4",
-  date?: Date
+  userId: string = DEFAULT_USER.id,
+  startDate?: Date,
+  endDate?: Date
 ) => {
-  const queryKey = date
-    ? ["dailyProgress", userId, date.toISOString().split("T")[0]]
-    : ["dailyProgress", userId];
+  const queryKey =
+    startDate && endDate
+      ? [
+          "dailyProgress",
+          userId,
+          startDate.toISOString().split("T")[0],
+          endDate.toISOString().split("T")[0],
+        ]
+      : ["dailyProgress", userId];
 
   return useQuery({
     queryKey,
     queryFn: async () => {
       const url = new URL("/api/daily-progress", window.location.origin);
       url.searchParams.set("userId", userId);
-      if (date) {
-        // Send only the date part (YYYY-MM-DD) not the full ISO string
-        const dateString = date.toISOString().split("T")[0];
+
+      if (startDate && endDate) {
+        // Use date range parameters
+        const startString = startDate.toISOString().split("T")[0];
+        const endString = endDate.toISOString().split("T")[0];
+        url.searchParams.set("startDate", startString);
+        url.searchParams.set("endDate", endString);
+      } else if (startDate) {
+        // Single date parameter
+        const dateString = startDate.toISOString().split("T")[0];
         url.searchParams.set("date", dateString);
       }
 
@@ -250,7 +269,7 @@ export const useDailyProgress = (
 
 // Hook for fetching weekly progress (for weekly habits)
 export const useWeeklyProgress = (
-  userId: string = "cmebt23m00000lx4fekjp8yr4",
+  userId: string = DEFAULT_USER.id,
   date?: Date
 ) => {
   const queryKey = date
@@ -351,7 +370,7 @@ function getWeekKey(date: Date): string {
 // Hook for fetching habits with progress for a specific date
 export const useHabitsWithProgressForDate = (
   date: Date,
-  userId: string = "cmebt23m00000lx4fekjp8yr4"
+  userId: string = DEFAULT_USER.id
 ) => {
   const {
     data: habitsData,

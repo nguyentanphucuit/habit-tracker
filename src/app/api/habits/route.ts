@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { DEFAULT_USER } from "@/lib/default-data";
 
 const prisma = new PrismaClient();
 
 export async function GET() {
   try {
-    // For now, use the seeded user ID - in production this would come from authentication
-    const userId = "cmebt23m00000lx4fekjp8yr4";
+    // Use the default user ID from defaults
+    const userId = DEFAULT_USER.id;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -29,7 +30,11 @@ export async function GET() {
       select: {
         id: true,
         name: true,
+        emoji: true,
+        color: true,
         frequency: true,
+        customDays: true,
+        startDate: true,
         targetValue: true,
         targetType: true,
         createdAt: true,
@@ -44,16 +49,18 @@ export async function GET() {
       const frequencyMap = {
         DAILY: "daily",
         WEEKLY: "weekly",
+        MONTHLY: "monthly",
       } as const;
 
       return {
         id: habit.id,
         name: habit.name,
-        emoji: "🎯", // Default emoji since database doesn't have this
-        color: "#ef4444", // Default color since database doesn't have this
+        emoji: habit.emoji || "🎯", // Use database emoji or default
+        color: habit.color || "#ef4444", // Use database color or default
         frequency: frequencyMap[habit.frequency] || "daily",
-        customDays: [], // Database doesn't have custom days yet
-        startDate: habit.createdAt.toISOString().split("T")[0],
+        customDays: habit.customDays || [], // Use database custom days or empty array
+        startDate:
+          habit.startDate || habit.createdAt.toISOString().split("T")[0],
         createdAt: habit.createdAt.toISOString(),
         updatedAt: habit.updatedAt.toISOString(),
         targetValue: habit.targetValue,

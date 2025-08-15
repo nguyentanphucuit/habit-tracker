@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,40 +7,34 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum HabitFrequency {
-  DAILY
-  WEEKLY
-}
-
-enum TargetType {
-  COUNT
-  MINUTES
-  BOOLEAN
-}
-
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  displayName String?
-  habits    Habit[]
+  id            String          @id @default(cuid())
+  email         String          @unique
+  displayName   String?
+  createdAt     DateTime        @default(now())
   dailyProgress DailyProgress[]
-  habitChecks HabitCheck[]
-  health    Health[]
-  createdAt DateTime @default(now())
+  habits        Habit[]
+  habitChecks   HabitCheck[]
+  health        Health[]
+  stats         Stats[]
 }
 
 model Habit {
-  id              String         @id @default(cuid())
-  userId          String
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name            String
-  frequency       HabitFrequency
-  targetType      TargetType
-  targetValue     Int
-  active          Boolean        @default(true)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  habitChecks     HabitCheck[]
+  id          String         @id @default(cuid())
+  userId      String
+  name        String
+  frequency   HabitFrequency
+  targetType  TargetType
+  targetValue Int
+  active      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  color       String         @default("#3b82f6")
+  customDays  Int[]          @default([])
+  emoji       String         @default("📝")
+  startDate   String         @default("")
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habitChecks HabitCheck[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -53,26 +44,45 @@ model Habit {
 model DailyProgress {
   id         String   @id @default(cuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   date       DateTime @db.Date
   habitsData Json
   createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
   @@index([userId])
   @@index([date])
 }
 
+model Stats {
+  id           String   @id @default(cuid())
+  userId       String
+  date         String
+  totalHabits  Int      @default(0)
+  sevenDayRate Float    @default(0)
+  bestStreak   Int      @default(0)
+  bestDay      Json?
+  worstDay     Json?
+  lastUpdated  DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+  @@index([sevenDayRate])
+  @@index([bestStreak])
+}
+
 model HabitCheck {
   id        String   @id @default(cuid())
   habitId   String
-  habit     Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)
   userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date      String  // ISO date string
+  date      String
   completed Boolean
-  timestamp String  // ISO timestamp string
+  timestamp String
   createdAt DateTime @default(now())
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([habitId])
   @@index([userId])
@@ -83,45 +93,44 @@ model HabitCheck {
 model Health {
   id              String   @id @default(cuid())
   userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   date            DateTime @db.Date
-  
-  // Basic Metrics
   weight          Float?
   height          Float?
   bmi             Float?
-  
-  // Apple Health Specific Metrics
   steps           Int?
   distance        Int?
   caloriesBurned  Int?
   activeEnergy    Int?
   restingEnergy   Int?
-  
-  // Vital Signs
   bloodPressure   String?
   heartRate       Int?
   bloodOxygen     Float?
   bodyTemperature Float?
-  
-  // Sleep Data
   sleepHours      Float?
   sleepQuality    String?
-  
-  // Activity Data
   exerciseMinutes Int?
   standHours      Int?
-  
-  // Other Metrics
   waterIntake     Int?
   notes           String?
-  source          String  @default("apple_health")
-  
+  source          String   @default("apple_health")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
   @@index([userId])
   @@index([date])
   @@index([source])
+}
+
+enum HabitFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum TargetType {
+  COUNT
+  MINUTES
+  BOOLEAN
 }

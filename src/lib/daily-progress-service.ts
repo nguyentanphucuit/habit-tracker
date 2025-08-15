@@ -1,6 +1,19 @@
 import { startOfDay, endOfDay, subDays } from "date-fns";
 import { prisma } from "./prisma";
 import { Prisma } from "@prisma/client";
+import { DEFAULT_TIMEZONE } from "./default-data";
+
+// Helper function to get Vietnam timezone date
+function getVietnamDate(date: Date = new Date()): Date {
+  // We're already in Vietnam timezone (GMT+7), so just return the date as-is
+  return date;
+}
+
+// Helper function to get start of day in Vietnam timezone
+function startOfDayVietnam(date: Date): Date {
+  // We're already in Vietnam timezone, so just get start of day
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
 
 interface HabitProgressData {
   id: string;
@@ -38,7 +51,7 @@ interface ProgressRecord {
  * This should be called at the end of each day or when resetting progress
  */
 export async function saveDailyProgressSnapshot(userId: string) {
-  const today = startOfDay(new Date());
+  const today = startOfDayVietnam(new Date());
 
   try {
     // Get all active habits for the user
@@ -72,7 +85,7 @@ export async function saveDailyProgressSnapshot(userId: string) {
         targetValue: habit.targetValue,
         currentProgress: 0, // Default to 0 since we don't store this on habits anymore
         isCompleted: false, // Default to false since we don't store this on habits anymore
-        lastUpdated: new Date(), // Use current date
+        lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(), // Use Vietnam time
       };
     });
 
@@ -297,11 +310,13 @@ export async function getHabitProgressOnDate(
  */
 export async function getHabitsProgressOnDate(userId: string, date: Date) {
   try {
+    // The date parameter is already in UTC from the API route, so we don't need startOfDay
+    // which can cause timezone conversion issues
     const progress = await prisma.dailyProgress.findUnique({
       where: {
         userId_date: {
           userId,
-          date: startOfDay(date),
+          date: date,
         },
       },
     });
@@ -328,18 +343,17 @@ export async function addHabitProgress(
   progressToAdd: number,
   targetDate?: Date
 ) {
-  // Ensure we work with the date as-is without timezone conversion
+  // Use the target date as-is (it's already in UTC from the API) or create today's date in UTC
   let date: Date;
   if (targetDate) {
-    // Create a new date using local components to avoid timezone issues
-    const year = targetDate.getFullYear();
-    const month = targetDate.getMonth();
-    const day = targetDate.getDate();
-    date = new Date(year, month, day);
+    // The targetDate is already in UTC from the API, so use it directly
+    date = targetDate;
   } else {
-    // Use today's date
+    // Use today's date in UTC
     const today = new Date();
-    date = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    date = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+    );
   }
 
   try {
@@ -377,13 +391,45 @@ export async function addHabitProgress(
         dailyProgress.habitsData as unknown as DailyProgressByHabitId;
     }
 
+    // Get ALL active habits for the user to populate complete daily data
+    const allHabits = await prisma.habit.findMany({
+      where: {
+        userId,
+        active: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        frequency: true,
+        targetType: true,
+        targetValue: true,
+      },
+    });
+
+    // Initialize habitsData with all habits for the day
+    allHabits.forEach((userHabit) => {
+      if (!habitsData[userHabit.id]) {
+        // Initialize new habit with default values
+        habitsData[userHabit.id] = {
+          id: userHabit.id,
+          name: userHabit.name,
+          frequency: userHabit.frequency,
+          targetType: userHabit.targetType,
+          targetValue: userHabit.targetValue,
+          currentProgress: 0,
+          isCompleted: false,
+          lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(),
+        };
+      }
+    });
+
     // Get or create habit progress for the target date
     const existingHabitProgress = habitsData[habitId];
     const currentProgress = existingHabitProgress?.currentProgress || 0;
     const newProgress = currentProgress + progressToAdd;
     const isCompleted = newProgress >= habit.targetValue;
 
-    // Update the habit's progress for the target date
+    // Update the specific habit's progress for the target date
     habitsData[habitId] = {
       id: habit.id,
       name: habit.name,
@@ -392,7 +438,7 @@ export async function addHabitProgress(
       targetValue: habit.targetValue,
       currentProgress: newProgress,
       isCompleted,
-      lastUpdated: new Date(),
+      lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(),
     };
 
     // Save the updated daily progress
@@ -416,7 +462,7 @@ export async function addHabitProgress(
     console.log(
       `📈 Added ${progressToAdd} progress to habit ${
         habit.name
-      } for ${date.toDateString()}`
+      } for ${date.toISOString()}`
     );
 
     return {

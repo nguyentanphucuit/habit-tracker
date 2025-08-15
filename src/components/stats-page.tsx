@@ -3,20 +3,107 @@
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useHabitsWithChecks } from "@/hooks/use-habits";
 import { HeatmapCalendar } from "./heatmap-calendar";
 import { StatsOverview } from "./stats-overview";
+import { useMemo, useState, useEffect } from "react";
+import {
+  DEFAULT_HABIT_STATS,
+  DEFAULT_STATS_DATA,
+  DEFAULT_USER,
+} from "@/lib/default-data";
+
+interface StatsData {
+  totalHabits: number;
+  sevenDayRate: number;
+  bestStreak: number;
+  bestDay: {
+    date: string;
+    completionRate: number;
+    completedHabits: number;
+    totalHabits: number;
+  } | null;
+  worstDay: {
+    date: string;
+    completionRate: number;
+    completedHabits: number;
+    totalHabits: number;
+  } | null;
+  lastUpdated: Date;
+}
 
 export function StatsPage() {
-  const { data: habitsWithChecks, isLoading, error } = useHabitsWithChecks();
+  const [stats, setStats] = useState<StatsData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Handle loading state
-  if (isLoading) {
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/stats", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: DEFAULT_USER.id,
+            days: 30,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch stats");
+        }
+
+        const result = await response.json();
+
+        // If no data exists, use default values
+        if (!result.data || result.data.totalHabits === 0) {
+          setStats(DEFAULT_STATS_DATA as StatsData);
+        } else {
+          setStats(result.data);
+        }
+
+        // Refresh the heatmap
+      } catch (error) {
+        setError(
+          error instanceof Error ? error.message : "Failed to fetch stats"
+        );
+        console.error("Error fetching stats:", error);
+
+        // Use default values on error
+        setStats(DEFAULT_STATS_DATA as StatsData);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  // Transform stats for StatsOverview component
+  const statsForOverview = useMemo(() => {
+    if (!stats) {
+      return DEFAULT_HABIT_STATS;
+    }
+
+    return {
+      ...DEFAULT_HABIT_STATS,
+      totalHabits: stats.totalHabits,
+      sevenDayRate: Math.round(stats.sevenDayRate),
+      bestStreak: stats.bestStreak,
+      bestDay: stats.bestDay,
+      worstDay: stats.worstDay,
+      lastUpdated: stats.lastUpdated,
+    };
+  }, [stats]);
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center">
@@ -29,7 +116,6 @@ export function StatsPage() {
     );
   }
 
-  // Handle error state
   if (error) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -38,47 +124,11 @@ export function StatsPage() {
           <p className="text-lg font-medium text-red-600 mb-2">
             Error loading statistics
           </p>
-          <p className="text-sm text-muted-foreground">
-            {error instanceof Error ? error.message : "Something went wrong"}
-          </p>
+          <p className="text-sm text-muted-foreground">{error}</p>
         </div>
       </div>
     );
   }
-
-  // Calculate stats from habits data
-  const stats = {
-    totalHabits: habitsWithChecks.length,
-    completedToday: habitsWithChecks.filter((habit) =>
-      habit.checks.some(
-        (check) =>
-          check.date === new Date().toISOString().split("T")[0] &&
-          check.completed
-      )
-    ).length,
-    completionRate7Days:
-      habitsWithChecks.length > 0
-        ? Math.round(
-            habitsWithChecks.reduce(
-              (sum, habit) => sum + habit.completionRate,
-              0
-            ) / habitsWithChecks.length
-          )
-        : 0,
-    completionRate30Days:
-      habitsWithChecks.length > 0
-        ? Math.round(
-            habitsWithChecks.reduce(
-              (sum, habit) => sum + habit.completionRate,
-              0
-            ) / habitsWithChecks.length
-          )
-        : 0,
-    bestStreak:
-      habitsWithChecks.length > 0
-        ? Math.max(...habitsWithChecks.map((habit) => habit.bestStreak))
-        : 0,
-  };
 
   return (
     <div className="space-y-6">
@@ -89,110 +139,88 @@ export function StatsPage() {
         </p>
       </div>
 
-      <StatsOverview stats={stats} />
+      <StatsOverview stats={statsForOverview} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>
-              Your habit completion over the last 8 weeks
+              Your daily habit completion over the last 30 days
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <HeatmapCalendar habits={habitsWithChecks} />
+            <HeatmapCalendar habits={[]} />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Top Performers</CardTitle>
+            <CardTitle>Performance Summary</CardTitle>
             <CardDescription>
-              Habits with the best completion rates
+              Overall statistics from the last 30 days
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {habitsWithChecks
-                .sort((a, b) => b.completionRate - a.completionRate)
-                .slice(0, 5)
-                .map((habit) => (
-                  <div
-                    key={habit.id}
-                    className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-                        style={{ backgroundColor: `${habit.color}20` }}>
-                        {habit.emoji}
-                      </div>
-                      <span className="font-medium">{habit.name}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="secondary">{habit.completionRate}%</Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {habit.currentStreak} day streak
-                      </span>
-                    </div>
-                  </div>
-                ))}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  7-Day Completion Rate
+                </span>
+                <Badge variant="secondary">
+                  {Math.round(stats?.sevenDayRate || 0)}%
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  Best Streak
+                </span>
+                <Badge variant="secondary">{stats?.bestStreak || 0} days</Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  Total Habits
+                </span>
+                <Badge variant="secondary">
+                  {stats?.totalHabits || 0} habits
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Best Day</span>
+                <Badge
+                  variant="secondary"
+                  className="bg-green-100 text-green-800">
+                  {stats?.bestDay
+                    ? `${stats.bestDay.date} (${Math.round(
+                        stats.bestDay.completionRate
+                      )}%)`
+                    : "None"}
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Worst Day</span>
+                <Badge variant="secondary" className="bg-red-100 text-red-800">
+                  {stats?.worstDay
+                    ? `${stats.worstDay.date} (${Math.round(
+                        stats.worstDay.completionRate
+                      )}%)`
+                    : "None"}
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  Last Updated
+                </span>
+                <Badge variant="secondary">
+                  {stats
+                    ? new Date(stats.lastUpdated).toLocaleDateString()
+                    : "Never"}
+                </Badge>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Detailed Stats</CardTitle>
-          <CardDescription>Individual habit performance</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {habitsWithChecks.map((habit) => (
-              <div
-                key={habit.id}
-                className="flex items-center justify-between p-4 rounded-lg border">
-                <div className="flex items-center space-x-3">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
-                    style={{ backgroundColor: `${habit.color}20` }}>
-                    {habit.emoji}
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{habit.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {habit.frequency === "daily"
-                        ? "Daily"
-                        : "Custom schedule"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-4 text-right">
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Current Streak
-                    </div>
-                    <div className="font-medium">{habit.currentStreak}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Best Streak
-                    </div>
-                    <div className="font-medium">{habit.bestStreak}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Completion Rate
-                    </div>
-                    <div className="font-medium">{habit.completionRate}%</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { format, isToday } from "date-fns";
 import { Habit, HabitCheck } from "@/types/habit";
 import { getVietnamTime, getTodayString, startOfDayVietnam } from "./time";
+import { DEFAULT_TIMEZONE } from "./default-data";
 
 export function getToday(): string {
   return getTodayString();
@@ -96,11 +97,15 @@ export function getHabitStats(habits: Habit[], checks: HabitCheck[]) {
   }
 
   return {
+    id: "",
+    userid: "",
+    date: today,
     totalHabits,
-    completedToday,
-    completionRate7Days,
-    completionRate30Days,
+    sevenDayRate: completionRate7Days,
     bestStreak,
+    bestDay: null,
+    worstDay: null,
+    lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(),
   };
 }
 

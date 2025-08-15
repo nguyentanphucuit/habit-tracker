@@ -4,26 +4,55 @@ import {
   getProgressSummary,
   getHabitsProgressOnDate,
 } from "@/lib/daily-progress-service";
+import { DEFAULT_USER } from "@/lib/default-data";
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    // For now, use the seeded user ID - in production this would come from authentication
-    const userId = searchParams.get("userId") || "cmebt23m00000lx4fekjp8yr4";
+    // Use the default user ID from defaults
+    const userId = searchParams.get("userId") || DEFAULT_USER.id;
     const date = searchParams.get("date");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
     // Use today's date if no date specified
     let targetDate: Date;
     if (date) {
-      // Parse the date string and ensure it's at the start of the day in local timezone
+      // Parse the date string and ensure it's at the start of the day in UTC
+      // This fixes the timezone issue where local parsing was causing date mismatches
       const [year, month, day] = date.split("-").map(Number);
-      targetDate = new Date(year, month - 1, day); // month is 0-indexed
-      targetDate = startOfDay(targetDate);
+      // Create date in UTC to avoid timezone conversion issues
+      targetDate = new Date(Date.UTC(year, month - 1, day));
     } else {
       targetDate = startOfDay(new Date());
     }
 
     try {
+      // If a date range is requested, get progress for that range
+      if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        const progressSummary = await getProgressSummary(
+          userId,
+          Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) +
+            1
+        );
+
+        // Filter to the requested date range
+        const filteredProgress = progressSummary.filter(
+          (record) => record.date >= start && record.date <= end
+        );
+
+        return NextResponse.json({
+          success: true,
+          data: filteredProgress.map((record) => ({
+            date: record.date,
+            habitsData: record.habitsById || {},
+          })),
+        });
+      }
+
       // If a specific date is requested, get progress for that date
       if (date) {
         const habitsProgress = await getHabitsProgressOnDate(
@@ -34,6 +63,7 @@ export async function GET(request: NextRequest) {
         console.log("🔍 Daily Progress API - Returning data:");
         console.log("  - date requested:", date);
         console.log("  - targetDate:", targetDate);
+        console.log("  - targetDate ISO:", targetDate.toISOString());
         console.log("  - habitsProgress:", habitsProgress);
 
         return NextResponse.json({

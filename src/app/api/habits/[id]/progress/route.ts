@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addHabitProgress } from "@/lib/daily-progress-service";
+import { DEFAULT_USER } from "@/lib/default-data";
 
 export async function PATCH(
   request: NextRequest,
@@ -10,23 +11,30 @@ export async function PATCH(
     const { progressToAdd, date } = await request.json();
     const habitId = params.id;
 
-    // For now, we'll use a hardcoded userId since we don't have authentication yet
-    // In a real app, this would come from the authenticated user session
-    const userId = "cmebt23m00000lx4fekjp8yr4";
+    // Use the default user ID from defaults
+    const userId = DEFAULT_USER.id;
 
-    // Parse the date string as a local date to avoid timezone issues
+    // Parse the date string as a UTC date to avoid timezone conversion issues
     let targetDate: Date;
     if (date && typeof date === "string") {
-      // Parse YYYY-MM-DD as local date components
+      // Parse YYYY-MM-DD as UTC date components to avoid timezone issues
       const [year, month, day] = date.split("-").map(Number);
-      targetDate = new Date(year, month - 1, day); // month is 0-indexed
+      targetDate = new Date(Date.UTC(year, month - 1, day)); // month is 0-indexed
       console.log(
-        `🔍 API - Date parsing: input="${date}" -> parsed=${targetDate.toISOString()} -> local=${targetDate.toDateString()}`
+        `🔍 API - Date parsing: input="${date}" -> parsed=${targetDate.toISOString()} -> UTC=${targetDate.toUTCString()}`
       );
     } else {
-      targetDate = new Date();
+      // Use today's date in UTC
+      const today = new Date();
+      targetDate = new Date(
+        Date.UTC(
+          today.getUTCFullYear(),
+          today.getUTCMonth(),
+          today.getUTCDate()
+        )
+      );
       console.log(
-        `🔍 API - No date provided, using today: ${targetDate.toDateString()}`
+        `🔍 API - No date provided, using today in UTC: ${targetDate.toISOString()}`
       );
     }
 

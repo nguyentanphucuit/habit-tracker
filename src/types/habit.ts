@@ -38,11 +38,25 @@ export interface HabitWithProgress extends Habit {
 }
 
 export interface HabitStats {
+  id: string;
+  userid: string;
+  date: string;
   totalHabits: number;
-  completedToday: number;
-  completionRate7Days: number;
-  completionRate30Days: number;
+  sevenDayRate: number;
   bestStreak: number;
+  bestDay?: {
+    date: string;
+    completionRate: number;
+    completedHabits: number;
+    totalHabits: number;
+  } | null;
+  worstDay?: {
+    date: string;
+    completionRate: number;
+    completedHabits: number;
+    totalHabits: number;
+  } | null;
+  lastUpdated: Date;
 }
 
 export interface Theme {
