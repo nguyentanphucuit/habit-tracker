@@ -71,11 +71,11 @@ export const HeatmapCalendar = forwardRef<
       // Use Vietnam timezone for date calculations
       const today = DEFAULT_TIMEZONE.getCurrentTime();
 
-      // Create end date at end of day in Vietnam timezone
+      // Create end date at end of day in Vietnam timezone (1 day in the future)
       const endDate = new Date(
         today.getFullYear(),
         today.getMonth(),
-        today.getDate(),
+        today.getDate() + 1,
         23,
         59,
         59,
@@ -98,6 +98,7 @@ export const HeatmapCalendar = forwardRef<
         localToday: new Date().toISOString(),
         timezoneOffset: today.getTimezoneOffset(),
         vietnamOffset: 7 * 60, // Vietnam is UTC+7
+        range: "29 days ago → today → 1 day in future",
       });
 
       const params = new URLSearchParams({
@@ -242,14 +243,14 @@ export const HeatmapCalendar = forwardRef<
   };
 
   const calendarData = useMemo(() => {
-    // Generate exactly 30 days including today using Vietnam timezone
+    // Generate 31 days: 29 days ago + today + 1 day in the future
     const today = DEFAULT_TIMEZONE.getCurrentTime();
 
     // Create dates in Vietnam timezone by manually calculating days
     const endDate = new Date(
       today.getFullYear(),
       today.getMonth(),
-      today.getDate()
+      today.getDate() + 1 // 1 day in the future
     );
 
     // Calculate start date by going back 29 days in Vietnam timezone
@@ -269,6 +270,7 @@ export const HeatmapCalendar = forwardRef<
       ),
       vietnamToday: today.toISOString(),
       localToday: new Date().toISOString(),
+      range: "29 days ago → today → 1 day in future",
     });
 
     const days = eachDayOfInterval({ start: startDate, end: endDate });
@@ -298,7 +300,9 @@ export const HeatmapCalendar = forwardRef<
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <div className="text-sm text-muted-foreground">Last 30 days</div>
+        <div className="text-sm text-muted-foreground">
+          29 days ago → today → 1 day ahead
+        </div>
         <div className="flex items-center space-x-2 text-xs">
           <span>Less</span>
           <div className="flex space-x-1">
