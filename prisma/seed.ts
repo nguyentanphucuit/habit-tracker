@@ -173,10 +173,30 @@ async function main() {
   // Create some sample daily progress data for the past few days
   const today = new Date();
   const sampleDates = [
-    new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-    new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    new Date(today.getTime() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-    today,
+    new Date(
+      Date.UTC(
+        today.getUTCFullYear(),
+        today.getUTCMonth(),
+        today.getUTCDate() - 3
+      )
+    ), // 3 days ago
+    new Date(
+      Date.UTC(
+        today.getUTCFullYear(),
+        today.getUTCMonth(),
+        today.getUTCDate() - 2
+      )
+    ), // 2 days ago
+    new Date(
+      Date.UTC(
+        today.getUTCFullYear(),
+        today.getUTCMonth(),
+        today.getUTCDate() - 1
+      )
+    ), // 1 day ago
+    new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+    ), // today
   ];
 
   for (const date of sampleDates) {

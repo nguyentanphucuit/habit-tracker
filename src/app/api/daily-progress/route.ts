@@ -5,25 +5,27 @@ import {
 } from "@/lib/daily-progress-service";
 import { DEFAULT_USER } from "@/lib/default-data";
 
-// Helper function to create a date at start of day
-function createStartOfDayDate(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+// Helper function to create a date at start of day in UTC
+function createStartOfDayDateUTC(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  );
 }
 
-// Helper function to parse date string and create Date object
+// Helper function to parse date string and create Date object in UTC
 function parseDateString(dateString: string): Date {
   const [year, month, day] = dateString.split("-").map(Number);
-  const targetDate = new Date();
-  targetDate.setFullYear(year);
-  targetDate.setMonth(month - 1);
-  targetDate.setDate(day);
-  return targetDate;
+  // Create date in UTC to match database storage
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
-// Helper function to get today's date
+// Helper function to get today's date in UTC
 function getTodayDate(): Date {
   const today = new Date();
-  return createStartOfDayDate(today);
+  // Create today's date in UTC to match database storage
+  return new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  );
 }
 
 // Helper function to create success response
@@ -46,7 +48,7 @@ function createDateRangeResponse(data: Record<string, unknown>[]) {
     success: true,
     data: data.map((record) => ({
       date: record.date,
-      habitsData: record.habitsById || {},
+      habitsData: record.habitsData || {},
     })),
   });
 }
@@ -59,14 +61,39 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
+    console.log("🔍 Daily Progress API - Request:", {
+      userId,
+      date,
+      startDate,
+      endDate,
+      url: request.url,
+    });
+
     // Determine target date
     const targetDate = date ? parseDateString(date) : getTodayDate();
+
+    console.log("🔍 Daily Progress API - Target Date:", {
+      originalDate: date,
+      parsedTargetDate: targetDate.toISOString(),
+      targetDateUTC: targetDate.toUTCString(),
+      targetDateLocal: targetDate.toString(),
+    });
 
     try {
       // Handle date range request
       if (startDate && endDate) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
+        const start = parseDateString(startDate);
+        const end = parseDateString(endDate);
+
+        console.log("🔍 Daily Progress API - Date Range:", {
+          startDateParam: startDate,
+          endDateParam: endDate,
+          parsedStart: start.toISOString(),
+          parsedEnd: end.toISOString(),
+          startLocal: start.toString(),
+          endLocal: end.toString(),
+        });
+
         const daysDiff =
           Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) +
           1;
@@ -74,9 +101,9 @@ export async function GET(request: NextRequest) {
         const progressSummary = await getProgressSummary(userId, daysDiff);
 
         const filteredProgress = progressSummary.filter((record) => {
-          const recordStartOfDay = createStartOfDayDate(record.date);
-          const startStartOfDay = createStartOfDayDate(start);
-          const endStartOfDay = createStartOfDayDate(end);
+          const recordStartOfDay = createStartOfDayDateUTC(record.date);
+          const startStartOfDay = createStartOfDayDateUTC(start);
+          const endStartOfDay = createStartOfDayDateUTC(end);
 
           return (
             recordStartOfDay >= startStartOfDay &&
@@ -106,8 +133,8 @@ export async function GET(request: NextRequest) {
       // Handle default case (today's data)
       const progressSummary = await getProgressSummary(userId, 7);
       const todayData = progressSummary.find((record) => {
-        const recordStartOfDay = createStartOfDayDate(record.date);
-        const targetStartOfDay = createStartOfDayDate(targetDate);
+        const recordStartOfDay = createStartOfDayDateUTC(record.date);
+        const targetStartOfDay = createStartOfDayDateUTC(targetDate);
         return recordStartOfDay.getTime() === targetStartOfDay.getTime();
       });
 

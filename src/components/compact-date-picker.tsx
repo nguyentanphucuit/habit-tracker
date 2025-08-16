@@ -1,28 +1,23 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon } from "lucide-react";
-import {
-  format,
-  addDays,
-  subDays,
-  parseISO,
-  isToday,
-  isSameDay,
-} from "date-fns";
-import { useRouter, useSearchParams } from "next/navigation";
 import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { format, addDays, subDays, isSameDay, isToday } from "date-fns";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useTimezone } from "@/contexts/timezone-context";
+import { getTodayStringInTimezone } from "@/lib/user-timezone";
+import { cn } from "@/lib/utils";
 
 interface CompactDatePickerProps {
-  onDateChange?: (date: Date) => void;
-  initialDate?: string; // ISO date string from URL params
+  onDateChange: (date: Date) => void;
+  initialDate?: string;
 }
 
 export function CompactDatePicker({
@@ -31,6 +26,7 @@ export function CompactDatePicker({
 }: CompactDatePickerProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { currentTimezone } = useTimezone();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [centerDate, setCenterDate] = useState<Date>(new Date());
   const [dateKey, setDateKey] = useState(0);
@@ -59,20 +55,24 @@ export function CompactDatePicker({
     return () => window.removeEventListener("resize", updateVisibleDatesCount);
   }, []);
 
-  // Initialize selected date from URL params or use today
+  // Initialize with initial date or today in user's timezone
   useEffect(() => {
     if (initialDate) {
       try {
-        const parsedDate = parseISO(initialDate);
-        setSelectedDate(parsedDate);
-        setCenterDate(parsedDate);
+        const date = new Date(initialDate);
+        setSelectedDate(date);
+        setCenterDate(date);
       } catch {
-        const today = new Date(); // Use default time
+        const today = new Date(getTodayStringInTimezone(currentTimezone));
         setSelectedDate(today);
         setCenterDate(today);
       }
+    } else {
+      const today = new Date(getTodayStringInTimezone(currentTimezone));
+      setSelectedDate(today);
+      setCenterDate(today);
     }
-  }, [initialDate]);
+  }, [initialDate, currentTimezone]);
 
   // Update URL when date changes
   const updateURL = async (date: Date) => {
@@ -99,7 +99,7 @@ export function CompactDatePicker({
 
   // Helper function to calculate days difference from today
   const getDaysDifference = (date: Date) => {
-    const today = new Date();
+    const today = new Date(getTodayStringInTimezone(currentTimezone));
     const todayStart = new Date(
       today.getFullYear(),
       today.getMonth(),
@@ -128,16 +128,22 @@ export function CompactDatePicker({
 
   const datesToShow = Math.floor(visibleDatesCount / 2);
 
+  // Helper function to check if a date is today in user's timezone
+  const isTodayInTimezone = (date: Date) => {
+    const today = new Date(getTodayStringInTimezone(currentTimezone));
+    return isSameDay(date, today);
+  };
+
   // Generate dates to display
   const generateVisibleDates = () => {
     const dates = [];
 
     for (let i = -datesToShow; i <= datesToShow; i++) {
-      // Create date in Vietnam timezone
+      // Create date in user's timezone
       const date = new Date(centerDate);
       date.setDate(centerDate.getDate() + i);
 
-      // Ensure the date is properly set in Vietnam timezone
+      // Ensure the date is properly set in user's timezone
       const localDate = new Date(date);
       dates.push(localDate);
     }
@@ -173,11 +179,11 @@ export function CompactDatePicker({
   };
 
   const goToToday = async () => {
-    const today = new Date(); // Use default time
+    const today = new Date(getTodayStringInTimezone(currentTimezone));
     setSelectedDate(today);
     setCenterDate(today);
     await updateURL(today);
-    setDateKey((prev) => prev + 1); // Force re-render
+    setDateKey((prev: number) => prev + 1); // Force re-render
     setIsTodayClicked(true);
     setTimeout(() => setIsTodayClicked(false), 2000);
   };
@@ -222,8 +228,14 @@ export function CompactDatePicker({
                   selected={selectedDate}
                   onSelect={handleCalendarSelect}
                   initialFocus
-                  fromDate={subDays(new Date(), 30)}
-                  toDate={addDays(new Date(), 30)}
+                  fromDate={subDays(
+                    new Date(getTodayStringInTimezone(currentTimezone)),
+                    30
+                  )}
+                  toDate={addDays(
+                    new Date(getTodayStringInTimezone(currentTimezone)),
+                    30
+                  )}
                   defaultMonth={selectedDate}
                   disabled={(date) => {
                     const daysDiff = getDaysDifference(date);
@@ -264,7 +276,7 @@ export function CompactDatePicker({
                 variant={isSameDay(date, selectedDate) ? "default" : "outline"}
                 size="sm"
                 className={`h-9 w-16 ${
-                  isToday(date) ? "ring-2 ring-blue-500" : ""
+                  isTodayInTimezone(date) ? "ring-2 ring-blue-500" : ""
                 }`}
                 onClick={() => handleDateSelect(date)}>
                 <div className="text-sm font-semibold">

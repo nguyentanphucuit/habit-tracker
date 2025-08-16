@@ -7,6 +7,7 @@ import {
 } from "@/types/habit";
 import { useMemo } from "react";
 import { DEFAULT_USER } from "@/lib/default-data";
+import { getDateStringInUTC } from "@/lib/user-timezone";
 
 // API response types
 interface ApiHabit {
@@ -232,8 +233,8 @@ export const useDailyProgress = (
       ? [
           "dailyProgress",
           userId,
-          startDate.toISOString().split("T")[0],
-          endDate.toISOString().split("T")[0],
+          getDateStringInUTC(startDate),
+          getDateStringInUTC(endDate),
         ]
       : ["dailyProgress", userId];
 
@@ -244,14 +245,14 @@ export const useDailyProgress = (
       url.searchParams.set("userId", userId);
 
       if (startDate && endDate) {
-        // Use date range parameters
-        const startString = startDate.toISOString().split("T")[0];
-        const endString = endDate.toISOString().split("T")[0];
+        // Use date range parameters - send UTC dates
+        const startString = getDateStringInUTC(startDate);
+        const endString = getDateStringInUTC(endDate);
         url.searchParams.set("startDate", startString);
         url.searchParams.set("endDate", endString);
       } else if (startDate) {
-        // Single date parameter
-        const dateString = startDate.toISOString().split("T")[0];
+        // Single date parameter - send UTC date
+        const dateString = getDateStringInUTC(startDate);
         url.searchParams.set("date", dateString);
       }
 
@@ -261,9 +262,10 @@ export const useDailyProgress = (
       }
       return response.json();
     },
-    staleTime: 0, // Always refetch when requested
-    refetchOnWindowFocus: true, // Refetch when window gains focus
-    refetchOnMount: true, // Refetch when component mounts
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 };
 
@@ -285,63 +287,28 @@ export const useWeeklyProgress = (
       const weekStart = getWeekStart(date);
       const weekEnd = getWeekEnd(date);
 
-      // Fetch progress for each day of the week
-      const weekProgress: Record<
-        string,
-        {
-          id: string;
-          name: string;
-          frequency: string;
-          targetType: string;
-          isCompleted: boolean;
-          lastUpdated: string;
-          targetValue: number;
-          currentProgress: number;
-        }
-      > = {};
+      // Use date range API call instead of individual day calls
+      const url = new URL("/api/daily-progress", window.location.origin);
+      url.searchParams.set("userId", userId);
+      url.searchParams.set("startDate", getDateStringInUTC(weekStart));
+      url.searchParams.set("endDate", getDateStringInUTC(weekEnd));
 
-      for (
-        let d = new Date(weekStart);
-        d <= weekEnd;
-        d.setDate(d.getDate() + 1)
-      ) {
-        const dateString = d.toISOString().split("T")[0];
-        const url = new URL("/api/daily-progress", window.location.origin);
-        url.searchParams.set("userId", userId);
-        url.searchParams.set("date", dateString);
-
-        try {
-          const response = await fetch(url.toString());
-          if (response.ok) {
-            const data = await response.json();
-            if (data.habitsData) {
-              // Merge progress data for the week
-              Object.keys(data.habitsData).forEach((habitId) => {
-                if (!weekProgress[habitId]) {
-                  weekProgress[habitId] = { ...data.habitsData[habitId] };
-                } else {
-                  // For weekly habits, if completed on any day, mark as completed for the week
-                  if (data.habitsData[habitId].isCompleted) {
-                    weekProgress[habitId].isCompleted = true;
-                    weekProgress[habitId].currentProgress = Math.max(
-                      weekProgress[habitId].currentProgress,
-                      data.habitsData[habitId].currentProgress
-                    );
-                  }
-                }
-              });
-            }
-          }
-        } catch (error) {
-          console.error(`Error fetching progress for ${dateString}:`, error);
+      try {
+        const response = await fetch(url.toString());
+        if (response.ok) {
+          const data = await response.json();
+          return data;
         }
+      } catch (error) {
+        console.error("Error fetching weekly progress:", error);
       }
 
-      return { habitsData: weekProgress };
+      return { habitsData: {} };
     },
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Don't refetch on mount if data exists
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 };
 

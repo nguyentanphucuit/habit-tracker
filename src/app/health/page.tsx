@@ -1,20 +1,49 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { useHealth } from "@/contexts/health-context";
+import { useTimezone } from "@/contexts/timezone-context";
+import { getTodayStringInTimezone } from "@/lib/user-timezone";
+import { useMemo, useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Heart,
+  Activity,
+  TrendingUp,
+  Target,
+} from "lucide-react";
 import { HealthData } from "@/types/health";
-import { getTodayString } from "@/lib/time";
 
 export default function HealthPage() {
-  const { healthData, isLoading, error, refreshData } = useHealth();
-  const [selectedMetric, setSelectedMetric] = useState<string>("steps");
+  const { healthData, isLoading, addHealthData, fetchHealthData } = useHealth();
+  const { currentTimezone } = useTimezone();
+  const [mounted, setMounted] = useState(false);
+
+  // Only show time after component mounts to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Get the last 7 days of data
   const last7Days = useMemo(() => {
+    if (!healthData || !Array.isArray(healthData) || healthData.length === 0) {
+      return [];
+    }
+
     const today = new Date();
     const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
@@ -28,7 +57,7 @@ export default function HealthPage() {
 
   // Calculate summary stats
   const summaryStats = useMemo(() => {
-    if (last7Days.length === 0) return null;
+    if (!last7Days || last7Days.length === 0) return null;
 
     const totalSteps = last7Days.reduce(
       (sum, day) => sum + (day.steps || 0),
@@ -66,7 +95,8 @@ export default function HealthPage() {
 
   // Get latest health data
   const latestData = useMemo(() => {
-    if (healthData.length === 0) return null;
+    if (!healthData || !Array.isArray(healthData) || healthData.length === 0)
+      return null;
     return healthData.sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     )[0];
@@ -146,26 +176,13 @@ export default function HealthPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="text-center text-red-500">
-          Error: {error}
-          <Button onClick={refreshData} className="ml-4">
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">❤️ Health Dashboard</h1>
-        <p className="text-muted-foreground">
-          Your Apple Health data and wellness metrics
-        </p>
+      {/* Header with timezone info */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Health</h1>
+        </div>
       </div>
 
       {/* Summary Stats */}
@@ -234,128 +251,6 @@ export default function HealthPage() {
         </div>
       )}
 
-      {/* Latest Data */}
-      {latestData && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Latest Health Data</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {formatDate(latestData.date.toString())}
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {latestData.steps !== undefined && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold">
-                    {latestData.steps.toLocaleString()}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Steps</div>
-                </div>
-              )}
-              {latestData.caloriesBurned !== undefined && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold">
-                    {latestData.caloriesBurned}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Calories</div>
-                </div>
-              )}
-              {latestData.sleepHours !== undefined && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold">
-                    {latestData.sleepHours}h
-                  </div>
-                  <div className="text-sm text-muted-foreground">Sleep</div>
-                </div>
-              )}
-              {latestData.heartRate !== undefined && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold">
-                    {latestData.heartRate}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Heart Rate
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Metric Selector */}
-      <div className="mb-6">
-        <div className="flex gap-2 flex-wrap">
-          {[
-            "steps",
-            "calories",
-            "sleep",
-            "exercise",
-            "heartRate",
-            "weight",
-          ].map((metric) => (
-            <Button
-              key={metric}
-              variant={selectedMetric === metric ? "default" : "outline"}
-              onClick={() => setSelectedMetric(metric)}
-              className="capitalize">
-              {metric === "heartRate" ? "Heart Rate" : metric}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* 7-Day Chart */}
-      {last7Days.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Last 7 Days -{" "}
-              {selectedMetric.charAt(0).toUpperCase() + selectedMetric.slice(1)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {last7Days.map((day) => {
-                const value = getMetricValue(day, selectedMetric);
-                const maxValue = Math.max(
-                  ...last7Days.map((d) => getMetricValue(d, selectedMetric))
-                );
-                const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
-
-                return (
-                  <div
-                    key={day.date.toString()}
-                    className="flex items-center space-x-4">
-                    <div className="w-20 text-sm text-muted-foreground">
-                      {formatDate(day.date.toString())}
-                    </div>
-                    <div className="flex-1">
-                      <Progress
-                        value={percentage}
-                        className="h-3"
-                        style={
-                          {
-                            "--progress-color": getMetricColor(
-                              selectedMetric,
-                              value
-                            ),
-                          } as React.CSSProperties
-                        }
-                      />
-                    </div>
-                    <div className="w-20 text-right font-medium">
-                      {value} {getMetricUnit(selectedMetric)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* No Data Message */}
       {healthData.length === 0 && (
         <Card>
@@ -370,7 +265,7 @@ export default function HealthPage() {
 
       {/* Refresh Button */}
       <div className="mt-6 text-center">
-        <Button onClick={refreshData} variant="outline">
+        <Button onClick={() => fetchHealthData()} variant="outline">
           Refresh Data
         </Button>
       </div>

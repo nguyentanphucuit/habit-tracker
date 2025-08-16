@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useTheme } from "@/contexts/theme-context";
 import { storage } from "@/lib/storage";
+import { TimezoneSelector } from "@/components/timezone-selector";
 
 export function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -127,6 +128,8 @@ export function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <TimezoneSelector />
 
         <Card>
           <CardHeader>

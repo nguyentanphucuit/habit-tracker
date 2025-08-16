@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { HabitProvider } from "@/contexts/habit-context";
 import { HealthProvider } from "@/contexts/health-context";
+import { TimezoneProvider } from "@/contexts/timezone-context";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { Navigation } from "@/components/navigation";
 
@@ -33,16 +34,18 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
         <ThemeProvider>
           <QueryProvider>
-            <HabitProvider>
-              <HealthProvider>
-                <div className="min-h-screen flex flex-col">
-                  <Navigation />
-                  <main className="flex-1 container mx-auto px-4 py-4">
-                    {children}
-                  </main>
-                </div>
-              </HealthProvider>
-            </HabitProvider>
+            <TimezoneProvider>
+              <HabitProvider>
+                <HealthProvider>
+                  <div className="min-h-screen flex flex-col">
+                    <Navigation />
+                    <main className="flex-1 container mx-auto px-4 py-4">
+                      {children}
+                    </main>
+                  </div>
+                </HealthProvider>
+              </HabitProvider>
+            </TimezoneProvider>
           </QueryProvider>
         </ThemeProvider>
       </body>

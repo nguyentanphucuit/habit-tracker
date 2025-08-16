@@ -10,7 +10,13 @@ import {
 import { format, subDays, eachDayOfInterval } from "date-fns";
 import { HabitWithChecks } from "@/types/habit";
 import { DEFAULT_USER } from "@/lib/default-data";
-import { getTodayString } from "@/lib/time";
+import { useTimezone } from "@/contexts/timezone-context";
+import {
+  getTodayStringInTimezone,
+  getStartOfDayInTimezone,
+  getEndOfDayInTimezone,
+  getDateStringInUTC,
+} from "@/lib/user-timezone";
 
 // Helper function to convert date to start of day
 function toStartOfDay(date: Date): Date {
@@ -49,6 +55,7 @@ export const HeatmapCalendar = forwardRef<
   HeatmapCalendarRef,
   HeatmapCalendarProps
 >(({ habits, userId = DEFAULT_USER.id }, ref) => {
+  const { currentTimezone } = useTimezone();
   // Get daily progress data for the last 30 days
   const [dailyProgress, setDailyProgress] = useState<{
     [date: string]: {
@@ -63,25 +70,16 @@ export const HeatmapCalendar = forwardRef<
   const fetchDailyProgress = async () => {
     try {
       setIsLoading(true);
-      // Use default date
-      const today = new Date();
+      // Use user's selected timezone
+      const today = new Date(getTodayStringInTimezone(currentTimezone));
 
-      // Create end date at end of day in Vietnam timezone (1 day in the future)
-      const endDate = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate() + 1,
-        23,
-        59,
-        59,
-        999
-      );
+      // Create end date at end of day in user's timezone
+      const endDate = getEndOfDayInTimezone(today, currentTimezone);
 
-      // Calculate start date by going back 29 days in Vietnam timezone
-      const startDate = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate() - 29
+      // Calculate start date by going back 29 days in user's timezone
+      const startDate = getStartOfDayInTimezone(
+        subDays(today, 29),
+        currentTimezone
       );
 
       console.log("🔍 API Request Date Range:", {
@@ -89,17 +87,17 @@ export const HeatmapCalendar = forwardRef<
         endDate: endDate.toISOString(),
         startDateFormatted: format(startDate, "yyyy-MM-dd"),
         endDateFormatted: format(endDate, "yyyy-MM-dd"),
-        vietnamToday: today.toISOString(),
+        userTimezoneToday: today.toISOString(),
         localToday: new Date().toISOString(),
         timezoneOffset: today.getTimezoneOffset(),
-        vietnamOffset: 7 * 60, // Vietnam is UTC+7
-        range: "29 days ago → today → 1 day in future",
+        userTimezoneOffset: currentTimezone.offset,
+        range: "29 days ago → today",
       });
 
       const params = new URLSearchParams({
         userId,
-        startDate: format(startDate, "yyyy-MM-dd"),
-        endDate: format(endDate, "yyyy-MM-dd"),
+        startDate: getDateStringInUTC(startDate),
+        endDate: getDateStringInUTC(endDate),
       });
 
       // Fetch directly from daily-progress API to get daily habit data
@@ -236,18 +234,21 @@ export const HeatmapCalendar = forwardRef<
     };
   };
 
+  // Generate calendar data for the last 30 days
   const calendarData = useMemo(() => {
-    // Generate 31 days: 29 days ago + today + 1 day in the future
-    const today = new Date();
+    if (!dailyProgress) return [];
 
-    // Create dates in Vietnam timezone by manually calculating days
+    // Generate 31 days: 29 days ago + today day in the future
+    const today = new Date(getTodayStringInTimezone(currentTimezone));
+
+    // Create dates in user's timezone by manually calculating days
     const endDate = new Date(
       today.getFullYear(),
       today.getMonth(),
-      today.getDate() + 1 // 1 day in the future
+      today.getDate()
     );
 
-    // Calculate start date by going back 29 days in Vietnam timezone
+    // Calculate start date by going back 29 days in user's timezone
     const startDate = new Date(
       today.getFullYear(),
       today.getMonth(),
@@ -262,7 +263,7 @@ export const HeatmapCalendar = forwardRef<
       daysDifference: Math.ceil(
         (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
       ),
-      vietnamToday: today.toISOString(),
+      userTimezoneToday: today.toISOString(),
       localToday: new Date().toISOString(),
       range: "29 days ago → today → 1 day in future",
     });
@@ -275,7 +276,7 @@ export const HeatmapCalendar = forwardRef<
     );
 
     return days.map((date) => createDayData(date));
-  }, [dailyProgress]);
+  }, [dailyProgress, currentTimezone]);
 
   // Remove automatic stats saving - heatmap should only display data
   // Stats are saved when users update their progress, not automatically by the heatmap
@@ -355,17 +356,7 @@ export const HeatmapCalendar = forwardRef<
                        flex items-center justify-center text-xs font-medium transition-colors hover:scale-110 cursor-pointer shadow-sm`}
               title={`${format(dayData.date, "MMM d, yyyy")}
 ${dayData.completedHabits}/${dayData.dailyHabits} daily habits completed
-${Math.round(dayData.completionRate * 100)}% daily completion rate
-Last updated: ${
-                dayData.habitsData && Object.values(dayData.habitsData)[0]
-                  ? new Date(
-                      Object.values(dayData.habitsData)[0].lastUpdated
-                    ).toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "N/A"
-              }`}
+${Math.round(dayData.completionRate * 100)}% daily completion rate`}
             />
           ))}
 

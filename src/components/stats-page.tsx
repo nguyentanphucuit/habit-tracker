@@ -10,6 +10,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { HeatmapCalendar } from "./heatmap-calendar";
 import { StatsOverview } from "./stats-overview";
+import { useTimezone } from "@/contexts/timezone-context";
+import { getCurrentTimeInTimezone } from "@/lib/user-timezone";
 import { useMemo, useState, useEffect } from "react";
 import {
   DEFAULT_HABIT_STATS,
@@ -37,6 +39,7 @@ interface StatsData {
 }
 
 export function StatsPage() {
+  const { currentTimezone } = useTimezone();
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -213,7 +216,9 @@ export function StatsPage() {
                 </span>
                 <Badge variant="secondary">
                   {stats
-                    ? new Date(stats.lastUpdated).toLocaleDateString()
+                    ? getCurrentTimeInTimezone(
+                        currentTimezone
+                      ).toLocaleDateString()
                     : "Never"}
                 </Badge>
               </div>

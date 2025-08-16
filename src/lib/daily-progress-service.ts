@@ -3,17 +3,11 @@ import { HabitStats } from "@/types/habit";
 import { prisma } from "./prisma";
 import { Prisma } from "@prisma/client";
 
-// Helper function to get Vietnam timezone date
-function getVietnamDate(date: Date = new Date()): Date {
-  // We're already in Vietnam timezone (GMT+7), so just return the date as-is
-  return date;
-}
-
-// Helper function to get start of day in Vietnam timezone
-function startOfDayVietnam(date: Date): Date {
-  const newDate = new Date(date);
-  newDate.setHours(0, 0, 0, 0);
-  return newDate;
+// Helper function to get start of day in UTC
+function startOfDayUTC(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  );
 }
 
 interface HabitProgressData {
@@ -54,9 +48,7 @@ interface ProgressRecord {
 export async function saveDailyProgressSnapshot(userId: string) {
   const today = new Date();
   const todayStartOfDay = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
   );
 
   try {

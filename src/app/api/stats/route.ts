@@ -4,29 +4,25 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { HabitStats } from "@/types/habit";
 
-// Helper function to get Vietnam timezone date
-function getVietnamDate(date: Date = new Date()): Date {
-  // We're already in Vietnam timezone (GMT+7), so just return the date as-is
-  return date;
-}
-
-// Helper function to get start of day in Vietnam timezone
-function startOfDayVietnam(date: Date): Date {
-  // We're already in Vietnam timezone, so just get start of day
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-// Helper function to get end of day in Vietnam timezone
-function endOfDayVietnam(date: Date): Date {
-  // We're already in Vietnam timezone, so just get end of day
+// Helper function to get start of day in UTC
+function startOfDayUTC(date: Date): Date {
   return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    23,
-    59,
-    59,
-    999
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  );
+}
+
+// Helper function to get end of day in UTC
+function endOfDayUTC(date: Date): Date {
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      23,
+      59,
+      59,
+      999
+    )
   );
 }
 
@@ -286,8 +282,8 @@ export async function GET(request: NextRequest) {
 
     if (startDate && endDate) {
       whereClause.date = {
-        gte: startOfDayVietnam(new Date(startDate)),
-        lte: endOfDayVietnam(new Date(endDate)),
+        gte: startOfDayUTC(new Date(startDate)),
+        lte: endOfDayUTC(new Date(endDate)),
       };
     }
 

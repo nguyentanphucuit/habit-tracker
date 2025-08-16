@@ -1,55 +1,58 @@
 "use client";
 
-import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useHealth } from "@/contexts/health-context";
+import { useTimezone } from "@/contexts/timezone-context";
+import { getTodayStringInTimezone } from "@/lib/user-timezone";
+import { useMemo, useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Heart, Activity, TrendingUp, Target } from "lucide-react";
+import { HealthData } from "@/types/health";
 
 export function HealthOverview() {
   const { healthData, isLoading } = useHealth();
+  const { currentTimezone } = useTimezone();
+  const [mounted, setMounted] = useState(false);
+
+  // Only show time after component mounts to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Get today's date string in user's selected timezone
+  const todayString = useMemo(() => {
+    return getTodayStringInTimezone(currentTimezone);
+  }, [currentTimezone]);
 
   // Get today's health data
   const todayData = useMemo(() => {
-    if (healthData.length === 0) return null;
+    if (!healthData || healthData.length === 0) return null;
 
-    const today = new Date();
-    const todayString = today.toISOString().split("T")[0];
+    const today = getTodayStringInTimezone(currentTimezone);
+    return healthData.find((data: HealthData) => data.date === today);
+  }, [healthData, currentTimezone]);
 
-    return healthData.find((data) => {
-      const dataDate = new Date(data.date);
-      const dataDateString = dataDate.toISOString().split("T")[0];
-      return dataDateString === todayString;
-    });
-  }, [healthData]);
+  // Calculate summary statistics
+  const summary = useMemo(() => {
+    if (!healthData || healthData.length === 0) {
+      return {
+        totalSteps: 0,
+        totalCalories: 0,
+        totalDistance: 0,
+        totalFlights: 0,
+      };
+    }
 
-  // Get weekly summary
-  const weeklySummary = useMemo(() => {
-    if (healthData.length === 0) return null;
-
-    const today = new Date();
-    const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-    const weekData = healthData.filter((data) => {
-      const dataDate = new Date(data.date);
-      return dataDate >= sevenDaysAgo && dataDate <= today;
-    });
-
-    if (weekData.length === 0) return null;
-
-    const totalSteps = weekData.reduce((sum, day) => sum + (day.steps || 0), 0);
-    const totalCalories = weekData.reduce(
-      (sum, day) => sum + (day.caloriesBurned || 0),
-      0
+    return healthData.reduce(
+      (sum: Record<string, number>, day: HealthData) => ({
+        totalSteps: (sum.totalSteps || 0) + (day.steps || 0),
+        totalCalories: (sum.totalCalories || 0) + (day.caloriesBurned || 0),
+        totalDistance: (sum.totalDistance || 0) + (day.distance || 0),
+        totalFlights: (sum.totalFlights || 0) + (day.exerciseMinutes || 0),
+      }),
+      {}
     );
-    const avgSleep =
-      weekData.reduce((sum, day) => sum + (day.sleepHours || 0), 0) /
-      weekData.length;
-
-    return {
-      totalSteps,
-      totalCalories,
-      avgSleep,
-      daysWithData: weekData.length,
-    };
   }, [healthData]);
 
   if (isLoading) {
@@ -65,7 +68,7 @@ export function HealthOverview() {
     );
   }
 
-  if (!todayData && !weeklySummary) {
+  if (!todayData && !summary) {
     return (
       <Card>
         <CardHeader>
@@ -87,6 +90,13 @@ export function HealthOverview() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          {/* Header with timezone info */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold">Health Overview</h1>
+            </div>
+          </div>
+
           {/* Today's Data */}
           {todayData && (
             <div>
@@ -133,13 +143,13 @@ export function HealthOverview() {
           )}
 
           {/* Weekly Summary */}
-          {weeklySummary && (
+          {summary && (
             <div>
               <h4 className="font-medium mb-2">This Week</h4>
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-2 bg-blue-50 rounded-lg">
                   <div className="text-lg font-bold">
-                    {weeklySummary.totalSteps.toLocaleString()}
+                    {summary.totalSteps.toLocaleString()}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Total Steps
@@ -147,7 +157,7 @@ export function HealthOverview() {
                 </div>
                 <div className="text-center p-2 bg-green-50 rounded-lg">
                   <div className="text-lg font-bold">
-                    {weeklySummary.totalCalories.toLocaleString()}
+                    {summary.totalCalories.toLocaleString()}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Total Calories
@@ -155,7 +165,7 @@ export function HealthOverview() {
                 </div>
                 <div className="text-center p-2 bg-purple-50 rounded-lg">
                   <div className="text-lg font-bold">
-                    {weeklySummary.avgSleep.toFixed(1)}h
+                    {summary.avgSleep.toFixed(1)}h
                   </div>
                   <div className="text-xs text-muted-foreground">Avg Sleep</div>
                 </div>
