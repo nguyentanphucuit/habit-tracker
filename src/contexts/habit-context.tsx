@@ -137,8 +137,15 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({
   const habitsWithChecks = React.useMemo(() => {
     return habits.map((habit) => {
       const habitChecks = checks.filter((check) => check.habitId === habit.id);
-      const { current, best } = calculateStreak(habit, habitChecks);
-      const completionRate = calculateCompletionRate(habit, habitChecks, 30);
+      const { current, best } = calculateStreak(
+        habit as HabitWithChecks,
+        habitChecks
+      );
+      const completionRate = calculateCompletionRate(
+        habit as HabitWithChecks,
+        habitChecks,
+        30
+      );
 
       return {
         ...habit,
@@ -152,7 +159,7 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Update stats when habits or checks change
   useEffect(() => {
-    const newStats = getHabitStats(habits, checks);
+    const newStats = getHabitStats(habits as HabitWithChecks[], checks);
     setStats(newStats);
   }, [habits, checks]);
 
@@ -203,7 +210,7 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({
   const toggleCheck = useCallback(
     (habitId: string, date: string) => {
       const habit = habits.find((h) => h.id === habitId);
-      if (!habit || !isDateEligible(habit, date)) return;
+      if (!habit || !isDateEligible(habit as HabitWithChecks, date)) return;
 
       const existingCheckIndex = checks.findIndex(
         (check) => check.habitId === habitId && check.date === date
@@ -244,7 +251,7 @@ export const HabitProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const refreshStats = useCallback(() => {
-    const newStats = getHabitStats(habits, checks);
+    const newStats = getHabitStats(habits as HabitWithChecks[], checks);
     setStats(newStats);
   }, [habits, checks]);
 

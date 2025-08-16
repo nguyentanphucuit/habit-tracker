@@ -4,7 +4,7 @@ import {
   TargetType,
   Prisma,
 } from "@prisma/client";
-import { DEFAULT_USER, DEFAULT_TIMEZONE } from "../src/lib/default-data";
+import { DEFAULT_USER } from "../src/lib/default-data";
 
 const prisma = new PrismaClient();
 
@@ -192,7 +192,7 @@ async function main() {
         targetValue: 30,
         currentProgress: Math.random() > 0.5 ? 30 : 15,
         isCompleted: Math.random() > 0.5,
-        lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(),
+        lastUpdated: new Date(),
       },
       cmecsnf4k000alx0tb1gn303k: {
         id: "cmecsnf4k000alx0tb1gn303k",
@@ -202,7 +202,7 @@ async function main() {
         targetValue: 30,
         currentProgress: Math.random() > 0.5 ? 30 : 20,
         isCompleted: Math.random() > 0.5,
-        lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(),
+        lastUpdated: new Date(),
       },
     };
 

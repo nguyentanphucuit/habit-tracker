@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useHealth } from "@/contexts/health-context";
-import { DEFAULT_TIMEZONE } from "@/lib/default-data";
 
 export function HealthOverview() {
   const { healthData, isLoading } = useHealth();
@@ -12,7 +11,7 @@ export function HealthOverview() {
   const todayData = useMemo(() => {
     if (healthData.length === 0) return null;
 
-    const today = DEFAULT_TIMEZONE.getCurrentTime();
+    const today = new Date();
     const todayString = today.toISOString().split("T")[0];
 
     return healthData.find((data) => {
@@ -26,7 +25,7 @@ export function HealthOverview() {
   const weeklySummary = useMemo(() => {
     if (healthData.length === 0) return null;
 
-    const today = DEFAULT_TIMEZONE.getCurrentTime();
+    const today = new Date();
     const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     const weekData = healthData.filter((data) => {

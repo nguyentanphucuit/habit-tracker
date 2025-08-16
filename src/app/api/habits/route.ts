@@ -59,12 +59,11 @@ export async function GET() {
         color: habit.color || "#ef4444", // Use database color or default
         frequency: frequencyMap[habit.frequency] || "daily",
         customDays: habit.customDays || [], // Use database custom days or empty array
-        startDate:
-          habit.startDate || habit.createdAt.toISOString().split("T")[0],
+        startDate: habit.startDate,
         createdAt: habit.createdAt.toISOString(),
         updatedAt: habit.updatedAt.toISOString(),
-        targetValue: habit.targetValue,
-        targetType: habit.targetType,
+        targetValue: habit.targetValue || 1,
+        targetType: habit.targetType || "COUNT",
         checks: [], // Empty array since we don't use HabitCheck anymore
         currentStreak: 0, // Will be calculated from daily progress
         bestStreak: 0, // Will be calculated from daily progress

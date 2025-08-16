@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useHealth } from "@/contexts/health-context";
 import { HealthData } from "@/types/health";
-import { DEFAULT_TIMEZONE } from "@/lib/default-data";
+import { getTodayString } from "@/lib/time";
 
 export default function HealthPage() {
   const { healthData, isLoading, error, refreshData } = useHealth();
@@ -15,7 +15,7 @@ export default function HealthPage() {
 
   // Get the last 7 days of data
   const last7Days = useMemo(() => {
-    const today = DEFAULT_TIMEZONE.getCurrentTime();
+    const today = new Date();
     const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     return healthData

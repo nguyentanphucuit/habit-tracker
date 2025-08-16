@@ -1,17 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DEFAULT_TIMEZONE } from "@/lib/default-data";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatTime, formatDate } from "@/lib/time";
 
 export function TimezoneDisplay() {
-  const [currentTime, setCurrentTime] = useState<Date>(
-    DEFAULT_TIMEZONE.getCurrentTime()
-  );
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentTime(DEFAULT_TIMEZONE.getCurrentTime());
+      setCurrentTime(new Date());
     }, 1000);
 
     return () => clearInterval(timer);

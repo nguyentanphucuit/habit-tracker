@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { startOfDay, endOfDay, subDays, format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { DEFAULT_TIMEZONE } from "@/lib/default-data";
+import { HabitStats } from "@/types/habit";
 
 // Helper function to get Vietnam timezone date
 function getVietnamDate(date: Date = new Date()): Date {
@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
         bestStreak,
         bestDay: bestDay as unknown as Prisma.InputJsonValue,
         worstDay: worstDay as unknown as Prisma.InputJsonValue,
-        lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(),
+        lastUpdated: new Date(),
       },
       create: {
         id: `stats-${userId}-${dateString}`,
@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
         sevenDayRate: Math.round(sevenDayRate * 100) / 100,
         bestStreak,
         bestDay: bestDay as unknown as Prisma.InputJsonValue,
-        lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(),
+        lastUpdated: new Date(),
       },
     });
 
@@ -444,7 +444,7 @@ export async function PUT(request: NextRequest) {
           bestStreak: 0,
           bestDay: null,
           worstDay: null,
-          lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(),
+          lastUpdated: new Date(),
         },
       });
     }

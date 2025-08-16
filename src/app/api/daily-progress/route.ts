@@ -1,76 +1,82 @@
 import { NextRequest, NextResponse } from "next/server";
-import { startOfDay } from "date-fns";
 import {
   getProgressSummary,
   getHabitsProgressOnDate,
 } from "@/lib/daily-progress-service";
-import { DEFAULT_USER, DEFAULT_TIMEZONE } from "@/lib/default-data";
+import { DEFAULT_USER } from "@/lib/default-data";
+
+// Helper function to create a date at start of day
+function createStartOfDayDate(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+// Helper function to parse date string and create Date object
+function parseDateString(dateString: string): Date {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const targetDate = new Date();
+  targetDate.setFullYear(year);
+  targetDate.setMonth(month - 1);
+  targetDate.setDate(day);
+  return targetDate;
+}
+
+// Helper function to get today's date
+function getTodayDate(): Date {
+  const today = new Date();
+  return createStartOfDayDate(today);
+}
+
+// Helper function to create success response
+function createSuccessResponse(
+  userId: string,
+  date: Date,
+  habitsData: Record<string, unknown>
+) {
+  return NextResponse.json({
+    success: true,
+    userId,
+    date,
+    habitsData,
+  });
+}
+
+// Helper function to create date range response
+function createDateRangeResponse(data: Record<string, unknown>[]) {
+  return NextResponse.json({
+    success: true,
+    data: data.map((record) => ({
+      date: record.date,
+      habitsData: record.habitsById || {},
+    })),
+  });
+}
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    // Use the default user ID from defaults
     const userId = searchParams.get("userId") || DEFAULT_USER.id;
     const date = searchParams.get("date");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
-    // Use today's date if no date specified
-    let targetDate: Date;
-    if (date) {
-      // Parse the date string and ensure it's at the start of the day in Vietnam timezone
-      const [year, month, day] = date.split("-").map(Number);
-      // Create date in Vietnam timezone to avoid timezone conversion issues
-      const vietnamDate = DEFAULT_TIMEZONE.getCurrentTime();
-      targetDate = new Date(
-        vietnamDate.getFullYear(),
-        vietnamDate.getMonth(),
-        vietnamDate.getDate()
-      );
-      // Adjust to the requested date
-      targetDate.setFullYear(year);
-      targetDate.setMonth(month - 1);
-      targetDate.setDate(day);
-    } else {
-      // Use Vietnam timezone for today's date
-      const today = DEFAULT_TIMEZONE.getCurrentTime();
-      targetDate = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate()
-      );
-    }
+    // Determine target date
+    const targetDate = date ? parseDateString(date) : getTodayDate();
 
     try {
-      // If a date range is requested, get progress for that range
+      // Handle date range request
       if (startDate && endDate) {
         const start = new Date(startDate);
         const end = new Date(endDate);
-
-        const progressSummary = await getProgressSummary(
-          userId,
+        const daysDiff =
           Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) +
-            1
-        );
+          1;
 
-        // Filter to the requested date range
-        // Convert dates to start of day for proper comparison
+        const progressSummary = await getProgressSummary(userId, daysDiff);
+
         const filteredProgress = progressSummary.filter((record) => {
-          const recordStartOfDay = new Date(
-            record.date.getFullYear(),
-            record.date.getMonth(),
-            record.date.getDate()
-          );
-          const startStartOfDay = new Date(
-            start.getFullYear(),
-            start.getMonth(),
-            start.getDate()
-          );
-          const endStartOfDay = new Date(
-            end.getFullYear(),
-            end.getMonth(),
-            end.getDate()
-          );
+          const recordStartOfDay = createStartOfDayDate(record.date);
+          const startStartOfDay = createStartOfDayDate(start);
+          const endStartOfDay = createStartOfDayDate(end);
 
           return (
             recordStartOfDay >= startStartOfDay &&
@@ -78,80 +84,41 @@ export async function GET(request: NextRequest) {
           );
         });
 
-        return NextResponse.json({
-          success: true,
-          data: filteredProgress.map((record) => ({
-            date: record.date,
-            habitsData: record.habitsById || {},
-          })),
-        });
+        return createDateRangeResponse(filteredProgress);
       }
 
-      // If a specific date is requested, get progress for that date
+      // Handle specific date request
       if (date) {
         const habitsProgress = await getHabitsProgressOnDate(
           userId,
           targetDate
         );
 
-        console.log("🔍 Daily Progress API - Returning data:");
-        console.log("  - date requested:", date);
-        console.log("  - targetDate:", targetDate);
-        console.log("  - targetDate ISO:", targetDate.toISOString());
-        console.log("  - habitsProgress:", habitsProgress);
-
-        return NextResponse.json({
-          success: true,
-          userId,
-          date: targetDate,
-          habitsData: habitsProgress,
+        console.log("🔍 Daily Progress API - Returning data:", {
+          dateRequested: date,
+          targetDate: targetDate.toISOString(),
+          habitsProgress,
         });
+
+        return createSuccessResponse(userId, targetDate, habitsProgress);
       }
 
-      // Otherwise, try to get progress summary for the last 7 days to get today's data
+      // Handle default case (today's data)
       const progressSummary = await getProgressSummary(userId, 7);
-
-      // Find today's data
       const todayData = progressSummary.find((record) => {
-        const recordStartOfDay = new Date(
-          record.date.getFullYear(),
-          record.date.getMonth(),
-          record.date.getDate()
-        );
-        const targetStartOfDay = new Date(
-          targetDate.getFullYear(),
-          targetDate.getMonth(),
-          targetDate.getDate()
-        );
-
+        const recordStartOfDay = createStartOfDayDate(record.date);
+        const targetStartOfDay = createStartOfDayDate(targetDate);
         return recordStartOfDay.getTime() === targetStartOfDay.getTime();
       });
 
-      if (todayData) {
-        return NextResponse.json({
-          success: true,
-          userId,
-          date: targetDate,
-          habitsData: todayData.habitsById || {},
-        });
-      } else {
-        // Return empty data if no progress found for today
-        return NextResponse.json({
-          success: true,
-          userId,
-          date: targetDate,
-          habitsData: {},
-        });
-      }
+      return createSuccessResponse(
+        userId,
+        targetDate,
+        todayData?.habitsById || {}
+      );
     } catch (error) {
       console.error("Error fetching progress summary:", error);
-      // Return empty data if there's an error
-      return NextResponse.json({
-        success: true,
-        userId,
-        date: targetDate,
-        habitsData: {},
-      });
+      return createSuccessResponse(userId, targetDate, {});
     }
   } catch (error) {
     console.error("Error fetching daily progress:", error);

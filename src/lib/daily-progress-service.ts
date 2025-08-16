@@ -1,7 +1,7 @@
-import { startOfDay, endOfDay, subDays } from "date-fns";
+import { HabitWithChecks, HabitCheck } from "@/types/habit";
+import { HabitStats } from "@/types/habit";
 import { prisma } from "./prisma";
 import { Prisma } from "@prisma/client";
-import { DEFAULT_TIMEZONE } from "./default-data";
 
 // Helper function to get Vietnam timezone date
 function getVietnamDate(date: Date = new Date()): Date {
@@ -11,8 +11,9 @@ function getVietnamDate(date: Date = new Date()): Date {
 
 // Helper function to get start of day in Vietnam timezone
 function startOfDayVietnam(date: Date): Date {
-  // We're already in Vietnam timezone, so just get start of day
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const newDate = new Date(date);
+  newDate.setHours(0, 0, 0, 0);
+  return newDate;
 }
 
 interface HabitProgressData {
@@ -51,7 +52,7 @@ interface ProgressRecord {
  * This should be called at the end of each day or when resetting progress
  */
 export async function saveDailyProgressSnapshot(userId: string) {
-  const today = DEFAULT_TIMEZONE.getCurrentTime();
+  const today = new Date();
   const todayStartOfDay = new Date(
     today.getFullYear(),
     today.getMonth(),
@@ -90,7 +91,7 @@ export async function saveDailyProgressSnapshot(userId: string) {
         targetValue: habit.targetValue,
         currentProgress: 0, // Default to 0 since we don't store this on habits anymore
         isCompleted: false, // Default to false since we don't store this on habits anymore
-        lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(), // Use Vietnam time
+        lastUpdated: new Date(), // Use default time
       };
     });
 
@@ -163,8 +164,11 @@ export async function getDailyProgressHistory(
  * Get progress summary for the last N days
  */
 export async function getProgressSummary(userId: string, days: number = 7) {
-  const endDate = endOfDay(new Date());
-  const startDate = startOfDay(subDays(new Date(), days - 1));
+  const endDate = new Date();
+  endDate.setHours(23, 59, 59, 999);
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days + 1);
+  startDate.setHours(0, 0, 0, 0);
 
   try {
     const progress = await getDailyProgressHistory(userId, startDate, endDate);
@@ -221,11 +225,13 @@ export async function getHabitStreak(userId: string, habitUuid: string) {
     let currentStreak = 0;
     let longestStreak = 0;
     let tempStreak = 0;
-    const today = startOfDay(new Date());
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     for (let i = 0; i < progress.length; i++) {
       const record = progress[i];
-      const recordDate = startOfDay(record.date);
+      const recordDate = new Date(record.date);
+      recordDate.setHours(0, 0, 0, 0);
       const habitsData = record.habitsData as unknown as DailyProgressByHabitId;
 
       // Find the specific habit in this day's data using actual UUID
@@ -247,7 +253,8 @@ export async function getHabitStreak(userId: string, habitUuid: string) {
         }
       } else {
         const prevRecord = progress[i - 1];
-        const prevDate = startOfDay(prevRecord.date);
+        const prevDate = new Date(prevRecord.date);
+        prevDate.setHours(0, 0, 0, 0);
         const daysDiff = Math.floor(
           (recordDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
         );
@@ -293,7 +300,7 @@ export async function getHabitProgressOnDate(
       where: {
         userId_date: {
           userId,
-          date: startOfDay(date),
+          date: new Date(date),
         },
       },
     });
@@ -423,7 +430,7 @@ export async function addHabitProgress(
           targetValue: userHabit.targetValue,
           currentProgress: 0,
           isCompleted: false,
-          lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(),
+          lastUpdated: new Date(),
         };
       }
     });
@@ -443,7 +450,7 @@ export async function addHabitProgress(
       targetValue: habit.targetValue,
       currentProgress: newProgress,
       isCompleted,
-      lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(),
+      lastUpdated: new Date(),
     };
 
     // Save the updated daily progress

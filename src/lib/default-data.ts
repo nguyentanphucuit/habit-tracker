@@ -6,51 +6,6 @@ import {
   HabitCheck,
 } from "@/types/habit";
 
-// Default timezone functions (must be defined first)
-export const DEFAULT_TIMEZONE = {
-  // Get current time in Vietnam timezone
-  getCurrentTime: (): Date => {
-    const now = new Date();
-    // Vietnam is UTC+7
-    return new Date(now.getTime() + 7 * 60 * 60 * 1000);
-  },
-
-  // Convert UTC date to Vietnam timezone
-  fromUTC: (utcDate: Date): Date => {
-    return new Date(utcDate.getTime() + 7 * 60 * 60 * 1000);
-  },
-
-  // Convert Vietnam timezone to UTC
-  toUTC: (vietnamDate: Date): Date => {
-    return new Date(vietnamDate.getTime() - 7 * 60 * 60 * 1000);
-  },
-
-  // Format date in Vietnam timezone
-  format: (
-    date: Date | string,
-    formatString: string = "yyyy-MM-dd HH:mm:ss"
-  ): string => {
-    const dateObj = typeof date === "string" ? new Date(date) : date;
-    const vietnamTime = new Date(dateObj.getTime() + 7 * 60 * 60 * 1000);
-
-    // Simple formatting for now (you can use date-fns if needed)
-    const year = vietnamTime.getFullYear();
-    const month = String(vietnamTime.getMonth() + 1).padStart(2, "0");
-    const day = String(vietnamTime.getDate()).padStart(2, "0");
-    const hours = String(vietnamTime.getHours()).padStart(2, "0");
-    const minutes = String(vietnamTime.getMinutes()).padStart(2, "0");
-    const seconds = String(vietnamTime.getSeconds()).padStart(2, "0");
-
-    return formatString
-      .replace("yyyy", String(year))
-      .replace("MM", month)
-      .replace("dd", day)
-      .replace("HH", hours)
-      .replace("mm", minutes)
-      .replace("ss", seconds);
-  },
-} as const;
-
 // Default user configuration
 export const DEFAULT_USER = {
   id: "cmecsndd10000lx0ttdei1i9a",
@@ -65,9 +20,9 @@ export const DEFAULT_HABIT: HabitWithChecks = {
   emoji: "🎯",
   color: "#ef4444",
   frequency: "daily",
-  startDate: DEFAULT_TIMEZONE.getCurrentTime().toISOString().split("T")[0],
-  createdAt: DEFAULT_TIMEZONE.getCurrentTime().toISOString(),
-  updatedAt: DEFAULT_TIMEZONE.getCurrentTime().toISOString(),
+  startDate: new Date().toISOString(),
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
   targetValue: 1,
   targetType: "COUNT",
   checks: [],
@@ -80,13 +35,13 @@ export const DEFAULT_HABIT: HabitWithChecks = {
 export const DEFAULT_HABIT_STATS: HabitStats = {
   id: "default",
   userid: DEFAULT_USER.id,
-  date: DEFAULT_TIMEZONE.getCurrentTime().toISOString().split("T")[0],
+  date: new Date().toISOString(),
   totalHabits: 0,
   sevenDayRate: 0,
   bestStreak: 0,
   bestDay: null,
   worstDay: null,
-  lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(),
+  lastUpdated: new Date(),
 };
 
 export const DEFAULT_STATS_DATA = {
@@ -95,7 +50,7 @@ export const DEFAULT_STATS_DATA = {
   bestStreak: 0,
   bestDay: null,
   worstDay: null,
-  lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(),
+  lastUpdated: new Date(),
 } as const;
 
 // Default theme settings (constant object)
@@ -134,14 +89,6 @@ export const DEFAULT_HABIT_SETTINGS = {
 export const DEFAULT_PROGRESS_VALUES = {
   currentProgress: 0,
   isCompleted: false,
-} as const;
-
-// Default timezone settings (Vietnam)
-export const DEFAULT_TIMEZONE_SETTINGS = {
-  name: "Asia/Ho_Chi_Minh",
-  offset: 7, // GMT+7
-  abbreviation: "ICT",
-  utcOffset: "+07:00",
 } as const;
 
 // Function for creating habit checks (needs to be a function due to dynamic parameters)

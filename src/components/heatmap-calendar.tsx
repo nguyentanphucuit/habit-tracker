@@ -9,24 +9,19 @@ import {
 } from "react";
 import { format, subDays, eachDayOfInterval } from "date-fns";
 import { HabitWithChecks } from "@/types/habit";
-import { DEFAULT_USER, DEFAULT_TIMEZONE } from "@/lib/default-data";
-import { formatVietnamTime } from "@/lib/time";
+import { DEFAULT_USER } from "@/lib/default-data";
+import { getTodayString } from "@/lib/time";
 
-// Helper function to get Vietnam timezone date
-function getVietnamDate(date: Date = new Date()): Date {
-  // Convert to Vietnam timezone
-  return DEFAULT_TIMEZONE.fromUTC(date);
+// Helper function to convert date to start of day
+function toStartOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-// Helper function to get start of day in Vietnam timezone
-function startOfDayVietnam(date: Date): Date {
-  // Ensure we're working with Vietnam timezone dates
-  const vietnamDate = DEFAULT_TIMEZONE.fromUTC(date);
-  return new Date(
-    vietnamDate.getFullYear(),
-    vietnamDate.getMonth(),
-    vietnamDate.getDate()
-  );
+// Helper function to get start of day
+function startOfDay(date: Date): Date {
+  const newDate = new Date(date);
+  newDate.setHours(0, 0, 0, 0);
+  return newDate;
 }
 
 // Interface for habit data from daily progress
@@ -68,8 +63,8 @@ export const HeatmapCalendar = forwardRef<
   const fetchDailyProgress = async () => {
     try {
       setIsLoading(true);
-      // Use Vietnam timezone for date calculations
-      const today = DEFAULT_TIMEZONE.getCurrentTime();
+      // Use default date
+      const today = new Date();
 
       // Create end date at end of day in Vietnam timezone (1 day in the future)
       const endDate = new Date(
@@ -135,15 +130,13 @@ export const HeatmapCalendar = forwardRef<
               date: string;
               habitsData: Record<string, DailyProgressHabit>;
             }) => {
-              // Parse the date and convert to Vietnam timezone for consistent formatting
+              // Parse the date
               const parsedDate = new Date(progress.date);
-              const vietnamDate = DEFAULT_TIMEZONE.fromUTC(parsedDate);
-              const dateStr = format(vietnamDate, "yyyy-MM-dd");
+              const dateStr = format(parsedDate, "yyyy-MM-dd");
 
               console.log("🔍 Processing Progress Date:", {
                 originalDate: progress.date,
                 parsedDate: parsedDate.toISOString(),
-                vietnamDate: vietnamDate.toISOString(),
                 formattedDateStr: dateStr,
                 habitsCount: Object.keys(progress.habitsData || {}).length,
               });
@@ -245,7 +238,7 @@ export const HeatmapCalendar = forwardRef<
 
   const calendarData = useMemo(() => {
     // Generate 31 days: 29 days ago + today + 1 day in the future
-    const today = DEFAULT_TIMEZONE.getCurrentTime();
+    const today = new Date();
 
     // Create dates in Vietnam timezone by manually calculating days
     const endDate = new Date(
@@ -365,10 +358,12 @@ ${dayData.completedHabits}/${dayData.dailyHabits} daily habits completed
 ${Math.round(dayData.completionRate * 100)}% daily completion rate
 Last updated: ${
                 dayData.habitsData && Object.values(dayData.habitsData)[0]
-                  ? formatVietnamTime(
-                      Object.values(dayData.habitsData)[0].lastUpdated,
-                      "HH:mm"
-                    )
+                  ? new Date(
+                      Object.values(dayData.habitsData)[0].lastUpdated
+                    ).toLocaleTimeString("en-US", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                   : "N/A"
               }`}
             />

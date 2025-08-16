@@ -1,19 +1,21 @@
 import { format, isToday } from "date-fns";
-import { Habit, HabitCheck } from "@/types/habit";
-import { getTodayString, startOfDayVietnam } from "./time";
-import { DEFAULT_TIMEZONE } from "./default-data";
+import { HabitWithChecks, HabitStats, HabitCheck } from "@/types/habit";
+import { getTodayString } from "./time";
 
 export function getToday(): string {
   return getTodayString();
 }
 
 export function getYesterday(): string {
-  const yesterday = new Date(DEFAULT_TIMEZONE.getCurrentTime());
+  const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   return format(yesterday, "yyyy-MM-dd");
 }
 
-export function isDateEligible(habit: Habit, dateStr: string): boolean {
+export function isDateEligible(
+  habit: HabitWithChecks,
+  dateStr: string
+): boolean {
   const date = new Date(dateStr);
 
   if (habit.frequency === "daily") {
@@ -32,7 +34,7 @@ export function isDateEligible(habit: Habit, dateStr: string): boolean {
   return false;
 }
 
-export function calculateStreak(habit: Habit, checks: HabitCheck[]) {
+export function calculateStreak(habit: HabitWithChecks, checks: HabitCheck[]) {
   let current = 0;
   let best = 0;
   let running = 0;
@@ -55,13 +57,13 @@ export function calculateStreak(habit: Habit, checks: HabitCheck[]) {
 }
 
 export function calculateCompletionRate(
-  habit: Habit,
+  habit: HabitWithChecks,
   checks: HabitCheck[],
   days: number = 30
 ) {
   const recentChecks = checks.filter((check) => {
     const checkDate = new Date(check.date);
-    const cutoffDate = startOfDayVietnam(new Date());
+    const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
     return checkDate >= cutoffDate;
   });
@@ -72,23 +74,57 @@ export function calculateCompletionRate(
     : 0;
 }
 
-export function getHabitStats(habits: Habit[], checks: HabitCheck[]) {
-  const totalHabits = habits.length;
-  const today = getToday();
-  const completedToday = checks.filter(
-    (check) => check.date === today && check.completed
-  ).length;
-  const completionRate7Days = calculateCompletionRate(
-    habits[0] || ({} as Habit),
-    checks,
-    7
-  );
-  const completionRate30Days = calculateCompletionRate(
-    habits[0] || ({} as Habit),
-    checks,
-    30
-  );
+export function createDefaultHabitStats(userId: string): HabitStats {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
 
+  return {
+    id: `stats-${userId}`,
+    userid: userId,
+    date: getTodayString(),
+    totalHabits: 0,
+    sevenDayRate: 0,
+    bestStreak: 0,
+    bestDay: null,
+    worstDay: null,
+    lastUpdated: new Date(),
+  };
+}
+
+export function calculateHabitStats(
+  habit: HabitWithChecks,
+  targetDate: Date = new Date()
+): HabitStats {
+  const { best } = calculateStreak(habit, habit.checks);
+  const completionRate = calculateCompletionRate(habit, habit.checks);
+
+  return {
+    id: `stats-${habit.id}`,
+    userid: habit.id,
+    date: getTodayString(),
+    totalHabits: 1,
+    sevenDayRate: completionRate,
+    bestStreak: best,
+    bestDay: null,
+    worstDay: null,
+    lastUpdated: new Date(),
+  };
+}
+
+export function getHabitStats(
+  habits: HabitWithChecks[],
+  checks: HabitCheck[]
+): HabitStats {
+  const totalHabits = habits.length;
+
+  if (totalHabits === 0) {
+    return createDefaultHabitStats("default");
+  }
+
+  // Calculate completion rate for the last 7 days
+  const sevenDayRate = calculateCompletionRate(habits[0], checks, 7);
+
+  // Calculate best streak across all habits
   let bestStreak = 0;
   for (const habit of habits) {
     const habitChecks = checks.filter((check) => check.habitId === habit.id);
@@ -97,15 +133,15 @@ export function getHabitStats(habits: Habit[], checks: HabitCheck[]) {
   }
 
   return {
-    id: "",
-    userid: "",
-    date: today,
+    id: "overall-stats",
+    userid: "default",
+    date: getTodayString(),
     totalHabits,
-    sevenDayRate: completionRate7Days,
+    sevenDayRate,
     bestStreak,
     bestDay: null,
     worstDay: null,
-    lastUpdated: DEFAULT_TIMEZONE.getCurrentTime(),
+    lastUpdated: new Date(),
   };
 }
 
